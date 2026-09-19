@@ -35,7 +35,15 @@ spent-authomator/
 │   ├── 008_implied_rates.sql   trigger: card_implied rates refreshed after each sync
 │   ├── 009_fee_inside.sql      fees are inside amount: true_cost fixed, net_amount added
 │   ├── 010_small_fixes.sql     manual-entry timezone, rule pattern guard, card-only fees view
-│   └── 011_ping.sql            public.ping() for the keepalive workflow
+│   ├── 011_ping.sql            public.ping() for the keepalive workflow
+│   └── 012_app.sql             app RPC functions: codes, add txn, month txns
+├── app/                         PWA for manual entry (Vite + React + TypeScript)
+│   ├── src/api/                 supabase client, RTK Query API, error mapping, types
+│   ├── src/features/
+│   │   ├── auth/                login screen, session hook, RequireAuth guard
+│   │   └── entry/                amount/date/code entry form, today's list, reducer
+│   ├── src/shared/               Button, Field, Toast, formatting helpers
+│   └── src/styles/               SCSS tokens and global styles
 ├── supabase/
 │   └── functions/
 │       └── ingest/
@@ -82,6 +90,7 @@ db/008_implied_rates.sql
 db/009_fee_inside.sql
 db/010_small_fixes.sql
 db/011_ping.sql
+db/012_app.sql
 ```
 
 Skip `004`: it is a check, not a migration. `001` uses bare `create table`
@@ -188,6 +197,33 @@ Fees are included in `amount`: the card reports the total that left the
 account, and `foreignTransactionFee` is 2% of the net purchase inside it.
 `net_amount` in `v_txn` is the amount without fees.
 
+
+## App
+
+`app/` is a PWA for adding manual entries and, later, browsing and charts.
+Vite + React + TypeScript, Redux Toolkit Query over `supabase.rpc()`, SCSS
+modules. It talks to the database only through `public.app_*` functions
+(`db/012_app.sql`) granted to `authenticated`; the `spend` schema stays
+closed. Design: `docs/superpowers/specs/2026-09-19-app-entry-design.md`.
+
+```bash
+cd app
+cp .env.example .env.local     # fill in the project URL and the publishable key
+npm install
+npm run dev                    # http://localhost:5173
+npm run lint && npm run typecheck && npm run test
+npm run build                  # dist/
+```
+
+**Supabase**: apply `db/012_app.sql`; Authentication → Users → add the one
+user; Authentication → Sign In / Providers → Email → disable sign-ups;
+Authentication → URL Configuration → add the app URL to Redirect URLs.
+
+**Cloudflare Pages**: Workers & Pages → Create → Pages → connect the GitHub
+repo. Root directory `app`, build command `npm run build`, output `dist`.
+Environment variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+(the publishable key). `public/_redirects` handles SPA routing. Every push
+to `main` deploys.
 
 ## The LFS-2026 spreadsheet
 
