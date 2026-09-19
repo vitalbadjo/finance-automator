@@ -1,13 +1,16 @@
 # Пинг против засыпания Supabase.
 #
 # Бесплатный проект паузится после недели без обращений к API и будится
-# только руками из панели. Один GET в сутки на корень PostgREST считается
-# активностью и этого достаточно.
+# только руками из панели. Один вызов public.ping() в сутки — настоящий
+# запрос в базу, этого достаточно.
+#
+# Почему не корень /rest/v1/: он отдаётся только секретному ключу, а класть
+# секретный ключ в GitHub незачем. ping() выдана роли anon миграцией 011 и
+# ничего не читает.
 #
 # Секреты репозитория (Settings → Secrets and variables → Actions):
 #   SUPABASE_URL       https://<ref>.supabase.co
-#   SUPABASE_ANON_KEY  anon / publishable ключ — он публичный, service_role
-#                      здесь не нужен: корень REST отдаёт только схему API.
+#   SUPABASE_ANON_KEY  sb_publishable_… или legacy anon (eyJ…) — оба публичные
 #
 # Оговорка GitHub: в репозитории без коммитов 60 дней расписания
 # отключаются автоматически, приходит письмо. Включить обратно — кнопкой
@@ -24,7 +27,7 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: GET /rest/v1/
+      - name: POST /rest/v1/rpc/ping
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -33,12 +36,15 @@ jobs:
             echo "не заданы SUPABASE_URL / SUPABASE_ANON_KEY в secrets" >&2
             exit 1
           fi
-          code=$(curl -sS -o /dev/null -w '%{http_code}' \
+          body=$(mktemp)
+          code=$(curl -sS -o "$body" -w '%{http_code}' \
+            -X POST -H "content-type: application/json" -d '{}' \
             -H "apikey: $SUPABASE_ANON_KEY" \
-            -H "authorization: Bearer $SUPABASE_ANON_KEY" \
-            "$SUPABASE_URL/rest/v1/")
-          echo "HTTP $code"
+            "$SUPABASE_URL/rest/v1/rpc/ping")
+          echo "HTTP $code $(cat "$body")"
           case "$code" in
             2*) ;;
+            401) echo "ключ отвергнут — проверь SUPABASE_ANON_KEY" >&2; exit 1 ;;
+            404) echo "нет функции public.ping() — примени db/011_ping.sql" >&2; exit 1 ;;
             *) echo "проект не ответил — возможно, уже на паузе" >&2; exit 1 ;;
           esac

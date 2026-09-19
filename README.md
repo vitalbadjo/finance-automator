@@ -34,7 +34,8 @@ spent-authomator/
 │   ├── 007_currency.sql        base currency, FX rates, conversion in views
 │   ├── 008_implied_rates.sql   trigger: card_implied rates refreshed after each sync
 │   ├── 009_fee_inside.sql      fees are inside amount: true_cost fixed, net_amount added
-│   └── 010_small_fixes.sql     manual-entry timezone, rule pattern guard, card-only fees view
+│   ├── 010_small_fixes.sql     manual-entry timezone, rule pattern guard, card-only fees view
+│   └── 011_ping.sql            public.ping() for the keepalive workflow
 ├── supabase/
 │   └── functions/
 │       └── ingest/
@@ -80,6 +81,7 @@ db/007_currency.sql
 db/008_implied_rates.sql
 db/009_fee_inside.sql
 db/010_small_fixes.sql
+db/011_ping.sql
 ```
 
 Skip `004`: it is a check, not a migration. `001` uses bare `create table`
@@ -108,10 +110,11 @@ Every later run overwrites existing records by key and adds new ones.
 
 **5. Keepalive ping.** A free Supabase project is paused after a week without
 requests and can only be resumed by hand from the dashboard. The workflow in
-`.github/workflows/keepalive.yml` makes one GET to the REST API once a day. In
-the GitHub repository set two secrets: `SUPABASE_URL` and `SUPABASE_ANON_KEY`
-(the anon / publishable key, not service_role). Verify with Run workflow on
-the Actions tab. GitHub caveat: after 60 days without commits the schedule is
+`.github/workflows/keepalive.yml` calls `public.ping()` (from `011`) once a
+day. In the GitHub repository set two secrets: `SUPABASE_URL` and
+`SUPABASE_ANON_KEY`. The key is the public one: `sb_publishable_…` from
+Project Settings → API Keys, or the legacy `anon` JWT. Never the secret /
+service_role key. Verify with Run workflow on the Actions tab. GitHub caveat: after 60 days without commits the schedule is
 disabled and has to be re-enabled on the same tab.
 
 ## How it works
