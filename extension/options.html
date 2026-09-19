@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>LFS Spend Sync — настройки</title>
+<style>
+  :root { color-scheme: light dark; --bg:#fff; --fg:#1a1a1a; --mut:#6b6b6b; --line:#d8d8d8; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1e1e1e; --fg:#ececec; --mut:#9a9a9a; --line:#3a3a3a; }
+  }
+  body { max-width: 560px; margin: 40px auto; padding: 0 16px; background: var(--bg); color: var(--fg);
+         font: 14px/1.5 system-ui, -apple-system, sans-serif; }
+  h1 { font-size: 17px; margin: 0 0 4px; }
+  p.lead { color: var(--mut); margin: 0 0 22px; }
+  label { display: block; margin: 16px 0 5px; font-weight: 500; }
+  input { width: 100%; box-sizing: border-box; padding: 8px 10px; font: inherit;
+          border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; }
+  small { display: block; margin-top: 5px; color: var(--mut); }
+  button { margin-top: 22px; padding: 9px 18px; font: inherit; font-weight: 500; cursor: pointer;
+           border: 1px solid var(--line); border-radius: 7px; background: var(--fg); color: var(--bg); }
+  #saved { margin-left: 12px; color: var(--mut); }
+</style>
+</head>
+<body>
+  <h1>LFS Spend Sync</h1>
+  <p class="lead">Значения хранятся локально в профиле браузера и в код расширения не попадают.</p>
+
+  <label for="url">Адрес функции приёма</label>
+  <input id="url" type="url" placeholder="https://&lt;project&gt;.supabase.co/functions/v1/ingest">
+  <small>Из Supabase → Edge Functions → ingest.</small>
+
+  <label for="token">Токен</label>
+  <input id="token" type="password" autocomplete="off">
+  <small>Тот же, что задан в <code>supabase secrets set INGEST_TOKEN=…</code></small>
+
+  <button id="save">Сохранить</button><span id="saved"></span>
+
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+# Пинг против засыпания Supabase.
+#
+# Бесплатный проект паузится после недели без обращений к API и будится
+# только руками из панели. Один GET в сутки на корень PostgREST считается
+# активностью и этого достаточно.
+#
+# Секреты репозитория (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL       https://<ref>.supabase.co
+#   SUPABASE_ANON_KEY  anon / publishable ключ — он публичный, service_role
+#                      здесь не нужен: корень REST отдаёт только схему API.
+#
+# Оговорка GitHub: в репозитории без коммитов 60 дней расписания
+# отключаются автоматически, приходит письмо. Включить обратно — кнопкой
+# на вкладке Actions. Любой коммит сбрасывает счётчик.
+
+name: keepalive
+
+on:
+  schedule:
+    - cron: "17 6 * * *"   # ежедневно 06:17 UTC; минута не 0, чтобы не толкаться в очереди
+  workflow_dispatch:        # ручной запуск для проверки
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: GET /rest/v1/
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "не заданы SUPABASE_URL / SUPABASE_ANON_KEY в secrets" >&2
+            exit 1
+          fi
+          code=$(curl -sS -o /dev/null -w '%{http_code}' \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/")
+          echo "HTTP $code"
+          case "$code" in
+            2*) ;;
+            *) echo "проект не ответил — возможно, уже на паузе" >&2; exit 1 ;;
+          esac

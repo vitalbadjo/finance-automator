@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "LFS Spend Sync",
+  "version": "0.3.0",
+  "description": "Выгружает историю трат из подключённых источников в Supabase по кнопке.",
+  "permissions": ["storage", "scripting", "tabs", "alarms"],
+  "host_permissions": ["https://www.bybit.com/*"],
+  "optional_host_permissions": ["https://*/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_popup": "popup.html", "default_title": "LFS Spend Sync" },
+  "options_page": "options.html"
+}

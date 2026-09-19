@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: light dark; --bg:#fff; --fg:#1a1a1a; --mut:#6b6b6b; --line:#e3e3e3; --ok:#1c6b3c; --err:#b3261e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1e1e1e; --fg:#ececec; --mut:#9a9a9a; --line:#333; --ok:#6cc48d; --err:#f2857c; }
+  }
+  body { width: 280px; margin: 0; padding: 14px; background: var(--bg); color: var(--fg);
+         font: 13px/1.45 system-ui, -apple-system, sans-serif; }
+  h1 { font-size: 13px; font-weight: 600; margin: 0 0 10px; }
+  button { width: 100%; padding: 9px; font: inherit; font-weight: 500; cursor: pointer;
+           border: 1px solid var(--line); border-radius: 7px; background: var(--fg); color: var(--bg); }
+  button:disabled { opacity: .5; cursor: default; }
+  #status { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);
+            color: var(--mut); white-space: pre-wrap; min-height: 2.6em; }
+  .ok { color: var(--ok); } .err { color: var(--err); }
+  a { color: inherit; font-size: 12px; }
+</style>
+</head>
+<body>
+  <h1>Выгрузка трат</h1>
+  <button id="go" data-source="bybit_card">Bybit Card → база</button>
+  <div id="status"></div>
+  <a href="#" id="opts">Настройки</a>
+  <script src="popup.js" type="module"></script>
+</body>
+</html>
