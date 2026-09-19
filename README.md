@@ -33,7 +33,8 @@ spent-authomator/
 │   ├── 006_sheet_read.sql      spend_sheet_rows: the slice for the spreadsheet
 │   ├── 007_currency.sql        base currency, FX rates, conversion in views
 │   ├── 008_implied_rates.sql   trigger: card_implied rates refreshed after each sync
-│   └── 009_fee_inside.sql      fees are inside amount: true_cost fixed, net_amount added
+│   ├── 009_fee_inside.sql      fees are inside amount: true_cost fixed, net_amount added
+│   └── 010_small_fixes.sql     manual-entry timezone, rule pattern guard, card-only fees view
 ├── supabase/
 │   └── functions/
 │       └── ingest/
@@ -78,6 +79,7 @@ db/006_sheet_read.sql
 db/007_currency.sql
 db/008_implied_rates.sql
 db/009_fee_inside.sql
+db/010_small_fixes.sql
 ```
 
 Skip `004`: it is a check, not a migration. `001` uses bare `create table`

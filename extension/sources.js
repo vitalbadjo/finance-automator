@@ -68,8 +68,15 @@ export const SOURCES = {
     },
 
     normalize: function (records) {
-      return records.map((t) => ({
-        external_id: String(t.txnId || t.recordId),
+      return records.map((t) => {
+        const id = t.txnId ?? t.recordId;
+        // String(undefined) дало бы "undefined", и все такие записи
+        // схлопнулись бы в одну по ключу (source, external_id).
+        if (id == null || id === "") {
+          throw new Error(`запись без txnId/recordId: ${t.merchName ?? "?"} ${t.txnTime ?? ""}`);
+        }
+        return {
+        external_id: String(id),
         txn_at: new Date(Number(t.txnTime)).toISOString(),
         merchant_raw: t.merchName ?? null,
         merchant_name: t.enrichment?.merchantName ?? t.merchName ?? null,
@@ -89,7 +96,8 @@ export const SOURCES = {
         display_status: String(t.displayStatus ?? ""),
         card_last4: t.pan4 ?? null,
         payload: t,
-      }));
+        };
+      });
     },
   },
 };

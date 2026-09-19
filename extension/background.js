@@ -43,6 +43,8 @@ chrome.alarms.onAlarm.addListener((a) => {
 
 // ── вкладка источника ────────────────────────────────────────────────────
 
+const TAB_LOAD_TIMEOUT_MS = 30_000;
+
 async function withSourceTab(source, fn) {
   const existing = await chrome.tabs.query({ url: source.urlMatch });
   let tab = existing[0];
@@ -51,9 +53,15 @@ async function withSourceTab(source, fn) {
   if (!tab) {
     tab = await chrome.tabs.create({ url: source.openUrl, active: false });
     opened = true;
-    await new Promise((resolve) => {
+    // Без таймаута зависшая страница держит кнопку в «Выгружаю…» навсегда.
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+        reject(new Error(`страница ${source.title} не загрузилась за ${TAB_LOAD_TIMEOUT_MS / 1000} с`));
+      }, TAB_LOAD_TIMEOUT_MS);
       const onUpdated = (id, info) => {
         if (id === tab.id && info.status === "complete") {
+          clearTimeout(timer);
           chrome.tabs.onUpdated.removeListener(onUpdated);
           resolve();
         }
