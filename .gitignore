@@ -5,3 +5,5 @@ node_modules/
 supabase/.temp/
 supabase/.branches/
 .idea/
+# personal financial notes, kept out of the repo
+docs/HANDOFF.md

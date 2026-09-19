@@ -1,69 +1,73 @@
 # LFS Spend Pipeline
 
-Выгрузка истории трат в Postgres по кнопке. Источник сейчас один — карта Bybit;
-добавление банка = один объект в `extension/sources.js`.
+One-button export of card transaction history into Postgres. There is a single
+source for now, the Bybit Card; adding a bank means adding one object to
+`extension/sources.js`.
 
 ```
-[расширение] --click--> страница источника (same-origin, куки браузера)
+[extension] --click--> source page (same-origin, browser cookies)
       |                      |
-      |<---- сырые записи ---+
+      |<---- raw records ----+
       v
 [Edge Function /ingest] --rpc--> public.spend_ingest() --upsert--> spend.raw_txn
                                                                       |
-                                                  spend.v_txn (категории, валюта)
+                                                  spend.v_txn (categories, currency)
                                                                       |
                               v_daily · v_unmapped · v_zero_auth · v_fees_monthly · v_missing_rates
                                                                       |
-                                       public.spend_sheet_rows() --> Apps Script --> «Мониторинг»
+                                       public.spend_sheet_rows() --> Apps Script --> "Мониторинг" sheet
 ```
 
-## Структура
+## Layout
 
 ```
 spent-authomator/
 ├── .github/workflows/
-│   └── keepalive.yml           ежедневный пинг, чтобы Supabase не уснул
-├── db/                         применяется руками, по номерам
-│   ├── 001_schema.sql          таблицы, вьюхи, функция нормализации
-│   ├── 002_seed.sql            коды категорий, MCC, правила по мерчантам
-│   ├── 003_ingest_fn.sql       spend_ingest: приём и upsert одним вызовом
-│   ├── 004_verify.sql          регрессия, не миграция — только читает
-│   ├── 005_manual.sql          ручные записи и code_override
-│   ├── 006_sheet_read.sql      spend_sheet_rows: срез для таблицы
-│   ├── 007_currency.sql        базовая валюта, курсы, приведение во вьюхах
-│   └── 008_implied_rates.sql   триггер: курсы card_implied после выгрузки
+│   └── keepalive.yml           daily ping so the Supabase project is not paused
+├── db/                         applied by hand, in numeric order
+│   ├── 001_schema.sql          tables, views, normalization function
+│   ├── 002_seed.sql            category codes, MCC rules, merchant rules
+│   ├── 003_ingest_fn.sql       spend_ingest: receive and upsert in one call
+│   ├── 004_verify.sql          regression check, not a migration — read-only
+│   ├── 005_manual.sql          manual entries and code_override
+│   ├── 006_sheet_read.sql      spend_sheet_rows: the slice for the spreadsheet
+│   ├── 007_currency.sql        base currency, FX rates, conversion in views
+│   ├── 008_implied_rates.sql   trigger: card_implied rates refreshed after each sync
+│   └── 009_fee_inside.sql      fees are inside amount: true_cost fixed, net_amount added
 ├── supabase/
 │   └── functions/
 │       └── ingest/
-│           └── index.ts        Edge Function: проверка токена, вызов spend_ingest
+│           └── index.ts        Edge Function: token check, call spend_ingest
 ├── docs/
-│   └── HANDOFF.md              решения, находки в данных, открытые вопросы
-├── apps-script/                скрипт Google Таблицы: база → «Мониторинг»
+│   └── HANDOFF.md              decisions and findings — local only, gitignored
+├── apps-script/                Google Sheets script: database → "Мониторинг"
 │   ├── Code.gs
 │   └── appsscript.json
-├── extension/                  распакованное расширение Chrome (MV3)
+├── extension/                  unpacked Chrome extension (MV3)
 │   ├── manifest.json
-│   ├── background.js           service worker: оркестрация, бейдж
-│   ├── sources.js              реестр источников — сюда добавляется банк
-│   ├── popup.html / popup.js   кнопка и статус
-│   └── options.html / options.js   адрес функции и токен
+│   ├── background.js           service worker: orchestration, badge
+│   ├── sources.js              source registry — a bank is added here
+│   ├── popup.html / popup.js   the button and status
+│   └── options.html / options.js   function URL and token
 └── README.md
 ```
 
-## Установка
+## Setup
 
-**0. Supabase CLI.** База и панель живут в браузере, но код Edge Function
-лежит здесь, и его надо загрузить — для этого локальная утилита:
+**0. Supabase CLI.** The database and the dashboard live in the browser, but
+the Edge Function code lives here and has to be uploaded. That takes the local
+CLI:
 
 ```bash
 brew install supabase/tap/supabase
-supabase login                        # откроет браузер
-supabase link --project-ref <ref>     # ref из адреса проекта в панели
+supabase login                        # opens the browser
+supabase link --project-ref <ref>     # ref is in the project URL in the dashboard
 ```
 
-Команды ниже запускаются из корня репозитория.
+The commands below run from the repository root.
 
-**1. База.** В Supabase → SQL Editor выполнить по порядку, на пустую схему:
+**1. Database.** In Supabase → SQL Editor, run in order, against an empty
+schema:
 
 ```
 db/001_schema.sql
@@ -73,228 +77,238 @@ db/005_manual.sql
 db/006_sheet_read.sql
 db/007_currency.sql
 db/008_implied_rates.sql
+db/009_fee_inside.sql
 ```
 
-`004` пропускается — это проверка, а не миграция. `001` использует голый
-`create table` и на уже существующей схеме упадёт.
+Skip `004`: it is a check, not a migration. `001` uses bare `create table`
+and fails on a schema that already exists.
 
-**2. Функция приёма.**
+**2. Ingest function.**
 
 ```bash
-openssl rand -hex 32                        # сохрани вывод: он нужен и расширению
-supabase secrets set INGEST_TOKEN="<вставь>"
+openssl rand -hex 32                        # keep the output: the extension needs it too
+supabase secrets set INGEST_TOKEN="<paste>"
 supabase functions deploy ingest --no-verify-jwt
 ```
 
-`--no-verify-jwt` обязателен: у расширения нет пользовательского JWT,
-авторизация идёт по заголовку `x-ingest-token`. Токен потом не прочитать —
-`secrets list` показывает только хеш; если потерял, задай новый той же
-командой и обнови его в настройках расширения.
+`--no-verify-jwt` is required: the extension holds no user JWT, authorization
+is the `x-ingest-token` header. The token cannot be read back later,
+`secrets list` shows only a digest. If it is lost, set a new one with the same
+command and update it in the extension options.
 
-**3. Расширение.** `chrome://extensions` → включить режим разработчика →
-«Загрузить распакованное» → папка `extension/`. Затем «Настройки»: вставить
-адрес функции и токен.
+**3. Extension.** `chrome://extensions` → enable Developer mode → Load
+unpacked → the `extension/` folder. Then open Options and paste the function
+URL and the token.
 
-**4. Первый запуск.** Клик по кнопке в попапе. Первая выгрузка забирает всю
-доступную историю (на 19.09.2026 — 128 транзакций с 08.07.2026), дальше
-каждый запуск перезаписывает существующие записи по ключу и добавляет новые.
+**4. First run.** Click the button in the popup. The first sync pulls the whole
+available history (as of 2026-09-19: 128 transactions since 2026-07-08).
+Every later run overwrites existing records by key and adds new ones.
 
-**5. Пинг против засыпания.** Бесплатный проект Supabase паузится после
-недели без обращений и будится только руками из панели. Workflow
-`.github/workflows/keepalive.yml` раз в сутки делает один GET к REST API. В
-репозитории на GitHub задать два секрета: `SUPABASE_URL` и
-`SUPABASE_ANON_KEY` (anon / publishable ключ, не service_role). Проверить
-можно кнопкой Run workflow на вкладке Actions. Оговорка GitHub: если в
-репозитории 60 дней нет коммитов, расписание отключается, и его надо включить
-обратно там же.
+**5. Keepalive ping.** A free Supabase project is paused after a week without
+requests and can only be resumed by hand from the dashboard. The workflow in
+`.github/workflows/keepalive.yml` makes one GET to the REST API once a day. In
+the GitHub repository set two secrets: `SUPABASE_URL` and `SUPABASE_ANON_KEY`
+(the anon / publishable key, not service_role). Verify with Run workflow on
+the Actions tab. GitHub caveat: after 60 days without commits the schedule is
+disabled and has to be re-enabled on the same tab.
 
-## Как это работает
+## How it works
 
-**Куки.** Расширение не видит и не хранит сессию Bybit. Запрос выполняется
-`chrome.scripting.executeScript` в контексте самой страницы bybit.com, куки
-подставляет браузер. Из service worker этот же запрос не сработал бы: у него
-origin `chrome-extension://`, и кука с `SameSite` в него не уедет.
+**Cookies.** The extension never sees or stores the Bybit session. The
+request runs via `chrome.scripting.executeScript` inside the bybit.com page
+itself, and the browser attaches the cookies. The same request from the
+service worker would not work: its origin is `chrome-extension://`, and a
+`SameSite` cookie is not sent there.
 
-**Если сессия истекла** — адаптер вернёт `AUTH: сессия Bybit истекла`.
-Логинишься и жмёшь кнопку снова.
+**If the session has expired** the adapter returns
+`AUTH: сессия Bybit истекла`. Log in and press the button again.
 
-**Бейдж на иконке** — число дней с последней успешной выгрузки. Зелёный до 5
-дней, жёлтый до 10, красный дальше, `!` если ни разу не получилось. Это
-единственная защита от молчаливого сбоя: кнопка не может «тихо перестать
-работать», потому что ты видишь счётчик. Счётчик пересчитывается будильником
-раз в час и при каждом открытии попапа, так что он идёт и без перезапуска
-браузера.
+**The badge on the icon** is the number of days since the last successful
+sync. Green up to 5 days, yellow up to 10, red after that, `!` if it never
+succeeded. This is the only protection against a silent failure: the button
+cannot "quietly stop working", because the counter is visible. The counter is
+recomputed by an alarm every hour and on every popup open, so it keeps
+counting without a browser restart.
 
-## Категоризация
+## Categorization
 
-Два слоя, в порядке приоритета:
+Two layers, in priority order:
 
-1. **`merchant_rule`** — совпадение по подстроке в имени мерчанта. Основной
-   механизм, потому что MCC у сербских эквайеров врёт: Lidl, dm-drogerie и
-   HAIRGUARD все сидят в 5999, а магазин одежды размечен как бытовая техника.
-2. **`mcc_rule`** — фоллбэк там, где MCC надёжен: подписки, связь, такси,
-   отели, снятие наличных.
+1. **`merchant_rule`**: substring match on the merchant name. This is the
+   primary mechanism, because Serbian acquirers report wrong MCCs: Lidl,
+   dm-drogerie and HAIRGUARD all sit in 5999, and a clothing shop is tagged as
+   household appliances.
+2. **`mcc_rule`**: fallback where the MCC is reliable: subscriptions, telecom,
+   taxi, hotels, cash withdrawals.
 
-Незнакомый мерчант не ломает выгрузку, а падает в `v_unmapped`. Добавляешь
-правило — вся история пересчитывается, потому что категория живёт во вьюхе,
-а не в данных.
+An unknown merchant does not break the sync, it lands in `v_unmapped`. Add a
+rule and the whole history is recomputed, because the category lives in a
+view, not in the data.
 
-## Что не считается расходом
+## What does not count as an expense
 
-| kind | что это | почему |
+| kind | what it is | why |
 |---|---|---|
-| `transfer` | снятие наличных (MCC 6010/6011) | деньги переложены, а не потрачены; иначе двойной счёт, когда потратишь наличные |
-| `auth` | нулевая авторизация | привязка карты сервисом |
-| `void` | `display_status` 2 и 3 | отказ и возврат |
+| `transfer` | cash withdrawal (MCC 6010/6011) | money moved, not spent; otherwise it is counted twice when the cash is spent |
+| `auth` | zero-amount authorization | a service linking the card |
+| `void` | `display_status` 2 and 3 | declined and reversed |
 
-## Коды источника
+## Source codes
 
-| поле | значения |
+| field | values |
 |---|---|
-| `txn_type` | `deduct` списание · `freeze` холд · `unfreeze` возврат холда |
-| `message_type` | `1` покупка · `2` наличные |
-| `display_status` | `0` в обработке · `1` успех · `2` отказ · `3` возврат |
+| `txn_type` | `deduct` settled · `freeze` hold · `unfreeze` hold released |
+| `message_type` | `1` purchase · `2` cash |
+| `display_status` | `0` in progress · `1` success · `2` declined · `3` reversed |
 
-## Полезные запросы
+## Useful queries
 
 ```sql
--- что уезжает в «Мониторинг» за период
+-- what goes to the "Мониторинг" sheet for a period
 select * from spend.v_daily
 where txn_date between '2026-09-01' and '2026-09-18'
 order by txn_date, code;
 
--- что автомат не разобрал
+-- what the rules could not classify
 select * from spend.v_unmapped;
 
--- нулевые авторизации: незнакомые имена здесь — повод насторожиться
+-- zero-amount authorizations: unfamiliar names here are worth a look
 select * from spend.v_zero_auth;
 
--- во что обходится карта
+-- what the card costs: fees as a share of net turnover, per month
 select * from spend.v_fees_monthly;
 ```
 
+Fees are included in `amount`: the card reports the total that left the
+account, and `foreignTransactionFee` is 2% of the net purchase inside it.
+`net_amount` in `v_txn` is the amount without fees.
 
-## Таблица LFS-2026
 
-Скрипт в `apps-script/` раскладывает суточные суммы по кодам в месячный блок
-листа «Мониторинг». Таблица — витрина: источник правды в Postgres, лист
-пересобирается из базы в любой момент.
+## The LFS-2026 spreadsheet
 
-Установка: Расширения → Apps Script, вставить `Code.gs`, затем Настройки
-проекта → Свойства скрипта:
+The script in `apps-script/` lays out daily sums per code into the month block
+of the "Мониторинг" sheet. The spreadsheet is a display: the source of truth
+is Postgres, and the sheet can be rebuilt from the database at any time.
 
-| свойство | где взять в панели Supabase |
+Setup: Extensions → Apps Script, paste `Code.gs`, then Project Settings →
+Script Properties:
+
+| property | where to find it in the Supabase dashboard |
 |---|---|
-| `SUPABASE_URL` | Project Settings → API → **Project URL**, вида `https://<ref>.supabase.co` |
-| `SERVICE_KEY` | Project Settings → API Keys → **service_role** (в новой схеме — **secret key**, `sb_secret_…`) |
+| `SUPABASE_URL` | Project Settings → API → **Project URL**, like `https://<ref>.supabase.co` |
+| `SERVICE_KEY` | Project Settings → API Keys → **service_role** (in the new scheme **secret key**, `sb_secret_…`) |
 
-Ключ в свойствах, а не в коде: код уезжает в git, свойства остаются в проекте.
+The key lives in properties, not in code: code goes to git, properties stay in
+the project.
 
-**service_role обходит RLS — это ключ от всей базы.** Свойства скрипта видит
-любой, у кого есть права редактора таблицы, поэтому лист с этим скриптом не
-стоит расшаривать на редактирование. Если однажды понадобится — тогда имеет
-смысл переделать `spend_sheet_rows` на приём отдельного токена и выдать право
-на неё роли `anon`: утечка такого ключа откроет одну функцию только на чтение,
-а не всю схему.
+**service_role bypasses RLS: it is the key to the whole database.** Script
+properties are visible to anyone with editor rights on the spreadsheet, so a
+sheet with this script should not be shared for editing. If that is ever
+needed, rework `spend_sheet_rows` to accept its own token and grant it to the
+`anon` role: a leaked key would then open one read-only function, not the
+whole schema.
 
-После перезагрузки таблицы в меню появится **Расходы**: текущий месяц (запись
-и пробный прогон) и «Обновить другой месяц…» — тот спросит номер, покажет
-пробный прогон и запишет только после подтверждения.
+After reloading the spreadsheet a **Расходы** menu appears: current month
+(write and dry run) and "Обновить другой месяц…", which asks for a month
+number, shows a dry run and writes only after confirmation.
 
-Скрипт пишет **три колонки — дату, код и сумму**. Для сентября это `BE`, `BF`
-и `BG`; раскладка считается как `7 × (месяц − 1)`, разделительная колонка
-между блоками учтена:
+The script writes **three columns: date, code and amount**. For September
+these are `BE`, `BF` and `BG`; the layout is `7 × (month − 1)`, the separator
+column between blocks is accounted for:
 
-| мес | янв | … | авг | **сен** | окт | … | дек |
+| month | Jan | … | Aug | **Sep** | Oct | … | Dec |
 |---|---|---|---|---|---|---|---|
-| дата / код / сумма | A B C | | AX AY AZ | **BE BF BG** | BL BM BN | | BZ CA CB |
+| date / code / amount | A B C | | AX AY AZ | **BE BF BG** | BL BM BN | | BZ CA CB |
 
-Гранулярность — строка на каждую пару (день, код), как в `v_daily`.
-Константа `GRANULARITY` в начале `Code.gs` переключает на `'month'`, если
-захочется одну строку на код за месяц.
+Granularity is one row per (day, code) pair, as in `v_daily`. The
+`GRANULARITY` constant at the top of `Code.gs` switches to `'month'` for one
+row per code per month.
 
-Валюту, курс и «итог» скрипт обычно не трогает — они в листе уже проставлены.
-Исключение одно: если строк за месяц окажется больше, чем их дотянули вниз
-вручную, `ensureScaffold_` достроит недостающие ячейки. Без этого сумма в
-такой строке просто не попала бы в сводку на вкладке «Деньги» — «итог» остался
-бы пустым. Трогаются только пустые ячейки, формула «итог» копируется из первой
-строки блока, чтобы Sheets сам сдвинул ссылки.
+The script normally leaves currency, rate and "итог" alone, they are already
+filled in the sheet. The one exception: if a month has more rows than were
+pulled down by hand, `ensureScaffold_` fills in the missing cells. Without it
+the amount in such a row would never reach the summary on the "Деньги" tab,
+because "итог" would stay empty. Only empty cells are touched, and the "итог"
+formula is copied from the first row of the block so that Sheets shifts the
+references itself.
 
-Три вещи, которые скрипт делает намеренно осторожно:
+Things the script does deliberately carefully:
 
-- **Не переписывает валюту, курс и «итог»** там, где они уже стоят —
-  дописывает только в строках ниже заполненной вручную области.
-- **Не трогает блоки до сентября 2026** — июль и август заполнены вручную по
-  рублёвым тратам, данных по карте за них нет. Попытка обновить такой месяц
-  завершается ошибкой, а не тихой перезаписью.
-- **Проверяет год.** В листе двенадцать блоков и нигде не записан год. Запуск
-  в 2027-м без проверки лёг бы поверх данных 2026-го. На новый год — новая
-  таблица и новое значение `SHEET_YEAR`.
-- **Один раз снимает копию листа** перед первой автоматической записью —
-  «Мониторинг (до автоматизации)».
+- **Does not overwrite currency, rate and "итог"** where they already exist,
+  it only fills rows below the hand-filled area.
+- **Does not touch blocks before September 2026**: July and August were filled
+  by hand from ruble expenses, and there is no card data for them. An attempt
+  to update such a month fails with an error instead of a silent overwrite.
+- **Checks the year.** The sheet has twelve blocks and the year is written
+  nowhere. Running in 2027 without the check would write over the 2026 data.
+  A new year means a new spreadsheet and a new `SHEET_YEAR` value.
+- **Backs up the sheet once** before the first automated write, as
+  "Мониторинг (до автоматизации)".
 
-Строку заголовков скрипт ищет по ячейке «дата» в колонке A, а не помнит
-номером: вставленная сверху строка сдвинула бы всё молча.
+The header row is found by the "дата" cell in column A, not remembered by
+number: a row inserted at the top would silently shift everything.
 
-### Перед первым запуском
+### Before the first run
 
-В блоке сентября (колонки BE:BJ) лежат одиннадцать строк, заведённых руками.
-Девять из них пришли с карты и теперь берутся из базы — если их оставить,
-суммы удвоятся. Две оставшиеся (`жил` и `юр`) переезжают в базу миграцией
-`005_manual.sql` как источник `manual`.
+The September block (columns BE:BJ) holds eleven rows entered by hand. Nine of
+them came from the card and are now taken from the database; if left in
+place, the sums would double. The remaining two (`жил` and `юр`) move into the
+database via `005_manual.sql` as the `manual` source.
 
-Поэтому: очистить `BE`, `BF` и `BG` во всех одиннадцати строках блока сентября,
-затем запустить пробный прогон и, если сходится, запись.
+So: clear `BE`, `BF` and `BG` in all eleven rows of the September block, then
+run a dry run and, if it matches, a write.
 
-### Ручные записи
+### Manual entries
 
-Того, чего нет на карте — аренда, наличные траты, переводы — добавляется
-вызовом:
+Anything not on the card, such as rent, cash expenses, transfers, is added
+with:
 
 ```sql
 select public.spend_add_manual('2026-10-01', 'жил', 1955, 'Аренда жилья');
 ```
 
-Повторный вызов с той же датой, кодом и примечанием обновит запись, а не
-задвоит её.
+Calling it again with the same date, code and note updates the entry instead
+of duplicating it.
 
-### Поправить один платёж
+### Fixing a single payment
 
-Когда правило по мерчанту верное, а конкретная покупка — исключение:
+When the merchant rule is right but one particular purchase is an exception:
 
 ```sql
 update spend.raw_txn set code_override = 'под'
 where source = 'bybit_card' and external_id = '<txnId>';
 ```
 
-`code_override` не входит в список колонок, которые пишет выгрузка, поэтому
-правка переживает любое число последующих синхронизаций.
+`code_override` is not in the column list the sync writes, so the fix
+survives any number of later syncs.
 
 
-## Валюты
+## Currencies
 
-Базовая валюта лежит в `spend.app_config` (сейчас USD). В `raw_txn` хранится
-сумма в валюте операции, приведение к базовой считается во вьюхе — как и вся
-остальная интерпретация. Наружу это выходит колонками `base_amount`,
-`base_fee`, `signed_base_amount`; `v_daily` отдаёт только базовую валюту,
-поэтому суммировать её безопасно.
+The base currency lives in `spend.app_config` (USD for now). `raw_txn` stores
+the amount in the transaction's own currency; conversion to base is computed
+in the view, like every other interpretation. It surfaces as the
+`base_amount`, `base_fee` and `signed_base_amount` columns; `v_daily` returns
+only the base currency, so its values are safe to sum.
 
-Курсы — в `spend.fx_rate`, где `rate` это **сколько единиц валюты за одну
-единицу базовой** (для RSD около 100, ровно как `local_amount / amount` у
-карты). Поиск берёт ближайшую дату не позже нужной, при равной дате
-предпочитает `source = 'ecb'` перед `'card_implied'`.
+Rates are in `spend.fx_rate`, where `rate` is **units of the currency per one
+unit of base** (about 100 for RSD, exactly the card's `local_amount / amount`).
+Lookup takes the nearest date not after the required one, and on an equal
+date prefers `source = 'ecb'` over `'card_implied'`.
 
-Первичные курсы взяты из собственных транзакций: у карты есть и сумма в USD,
-и сумма на месте, то есть фактический курс за каждый день с покупками. Это
-курс со спредом Bybit. Рыночный фид (ЕЦБ) можно добавить позже с
-`source = 'ecb'` — он получит приоритет, ничего переписывать не придётся.
+The initial rates come from the card's own transactions: each has both the USD
+amount and the local amount, which gives the actual rate for every day with
+purchases. This is the rate including Bybit's spread. A market feed (ECB) can
+be added later with `source = 'ecb'`; it takes priority without rewriting
+anything. Since `008` the card-implied rates are refreshed by a trigger after
+every sync.
 
-Добавить курс руками:
+Adding a rate by hand:
 
 ```sql
 select public.spend_set_rate('2026-10-01', 'RSD', 100.42, 'ecb');
 ```
 
-**Трата без курса молча выпадает из `v_daily`** — не обнуляется, а исчезает.
-Поэтому `select * from spend.v_missing_rates;` показывает такие случаи, а
-`004_verify.sql` проверяет, что их ноль.
+**An expense with no rate silently drops out of `v_daily`**: it is not zeroed,
+it disappears. `select * from spend.v_missing_rates;` shows such cases, and
+`004_verify.sql` asserts there are none.
