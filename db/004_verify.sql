@@ -129,6 +129,10 @@ info as (
   select 'ручных записей' as ключ,
          (select count(*) from raw_txn where source = 'manual')::numeric as факт
   union all
+  select 'из них через приложение',
+         (select count(*) from raw_txn
+           where source = 'manual' and payload->>'via' = 'app')::numeric
+  union all
   select 'сумма ручных за период',
          (select round(sum(-t.signed_base_amount), 2)
             from v_txn t, period p
