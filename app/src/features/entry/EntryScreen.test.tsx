@@ -1,0 +1,80 @@
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { Provider } from 'react-redux';
+import { makeStore } from '@/app/store';
+import { EntryScreen } from './EntryScreen';
+
+const rpc = vi.fn();
+vi.mock('@/api/supabase', () => ({
+  supabase: {
+    rpc: (...a: unknown[]): unknown => rpc(...a),
+    auth: { signOut: vi.fn(() => Promise.resolve()) },
+  },
+}));
+
+const codes = [
+  { code: 'каф', title: 'Кафе, рестораны', section: 'Комфорт', sort_order: 210 },
+  { code: 'прод', title: 'Продукты', section: 'Базовые', sort_order: 20 },
+];
+
+const renderScreen = () =>
+  render(
+    <Provider store={makeStore()}>
+      <EntryScreen />
+    </Provider>,
+  );
+
+beforeEach(() => {
+  rpc.mockReset();
+  localStorage.clear();
+  rpc.mockImplementation((fn: string) => {
+    if (fn === 'app_codes') return Promise.resolve({ data: codes, error: null });
+    if (fn === 'app_month_txns') return Promise.resolve({ data: [], error: null });
+    if (fn === 'app_add_txn') return Promise.resolve({ data: 'uuid-1', error: null });
+    return Promise.resolve({ data: null, error: { message: `нет функции ${fn}` } });
+  });
+});
+
+describe('EntryScreen', () => {
+  it('сохраняет запись и очищает сумму, оставляя категорию', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await user.type(await screen.findByLabelText('Сумма'), '350');
+    await user.click(screen.getByRole('radio', { name: 'каф' }));
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledWith(
+        'app_add_txn',
+        expect.objectContaining({ p_amount: 350, p_currency: 'USD', p_code: 'каф', p_note: null }),
+      );
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent('Записано');
+    expect(screen.getByLabelText('Сумма')).toHaveValue('');
+    expect(screen.getByRole('radio', { name: 'каф' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('при ошибке показывает текст и не теряет введённое', async () => {
+    rpc.mockImplementation((fn: string) => {
+      if (fn === 'app_codes') return Promise.resolve({ data: codes, error: null });
+      if (fn === 'app_month_txns') return Promise.resolve({ data: [], error: null });
+      return Promise.resolve({ data: null, error: { message: 'Сумма должна быть больше нуля' } });
+    });
+    const user = userEvent.setup();
+    renderScreen();
+    await user.type(await screen.findByLabelText('Сумма'), '12');
+    await user.click(screen.getByRole('radio', { name: 'прод' }));
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Сумма должна быть больше нуля');
+    expect(screen.getByLabelText('Сумма')).toHaveValue('12');
+    expect(screen.getByRole('button', { name: 'Сохранить' })).toBeEnabled();
+  });
+
+  it('не даёт сохранить без категории', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await user.type(await screen.findByLabelText('Сумма'), '5');
+    expect(screen.getByRole('button', { name: 'Сохранить' })).toBeDisabled();
+  });
+});
