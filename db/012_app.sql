@@ -36,7 +36,7 @@ declare
   v_note  text := nullif(btrim(coalesce(p_note, '')), '');
   v_cur   text := upper(btrim(coalesce(p_currency, '')));
 begin
-  if p_amount is null or p_amount <= 0 then
+  if p_amount is null or not (p_amount > 0 and p_amount < 1e12) then
     raise exception 'Сумма должна быть больше нуля';
   end if;
   if v_cur !~ '^[A-Z]{3}$' then

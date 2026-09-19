@@ -77,4 +77,21 @@ describe('EntryScreen', () => {
     await user.type(await screen.findByLabelText('Сумма'), '5');
     expect(screen.getByRole('button', { name: 'Сохранить' })).toBeDisabled();
   });
+
+  it('добавляет новую валюту через «+» и сохраняет с ней', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await user.click(await screen.findByRole('button', { name: 'Добавить валюту' }));
+    await user.type(screen.getByLabelText('Новая валюта'), 'rsd');
+    await user.click(screen.getByRole('button', { name: 'ОК' }));
+    expect(screen.getByRole('radio', { name: 'RSD' })).toHaveAttribute('aria-checked', 'true');
+
+    await user.type(screen.getByLabelText('Сумма'), '100');
+    await user.click(screen.getByRole('radio', { name: 'каф' }));
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledWith('app_add_txn', expect.objectContaining({ p_currency: 'RSD' }));
+    });
+  });
 });

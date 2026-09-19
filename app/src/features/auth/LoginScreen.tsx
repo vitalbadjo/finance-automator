@@ -8,12 +8,13 @@ import { useSession } from './useSession';
 import styles from './LoginScreen.module.scss';
 
 export function LoginScreen() {
-  const { session } = useSession();
+  const { session, status } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  if (status === 'loading') return null;
   if (session) return <Navigate to="/" replace />;
 
   const submit = async (e: SubmitEvent<HTMLFormElement>) => {

@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { useAddTxnMutation, useGetCodesQuery } from '@/api/api';
+import { useAddTxnMutation, useGetCodesQuery, useGetMonthTxnsQuery } from '@/api/api';
 import { supabase } from '@/api/supabase';
 import { Button } from '@/shared/Button';
 import { Field } from '@/shared/Field';
@@ -11,7 +11,7 @@ import { DatePicker } from './DatePicker';
 import { TodayList } from './TodayList';
 import { entryReducer, initialEntry } from './entryReducer';
 import { pushRecentCurrency, readRecentCurrencies } from './recentCurrencies';
-import { todayISO } from './dates';
+import { monthRange, todayISO } from './dates';
 import styles from './EntryScreen.module.scss';
 
 interface ToastState {
@@ -24,9 +24,16 @@ export function EntryScreen() {
   const [state, dispatch] = useReducer(entryReducer, initialEntry(currencies[0] ?? 'USD', todayISO()));
   const [toast, setToast] = useState<ToastState | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const busy = useRef(false);
 
   const codes = useGetCodesQuery();
+  const month = useGetMonthTxnsQuery(monthRange(todayISO()));
   const [addTxn, { isLoading: saving }] = useAddTxnMutation();
+
+  const baseCurrency = month.data?.[0]?.base_currency ?? 'USD';
+  const options = [...currencies.slice(0, 3), baseCurrency, state.currency].filter(
+    (c, i, arr) => arr.indexOf(c) === i,
+  );
 
   const amount = Number(state.amount);
   const canSave = !saving && state.code !== null && Number.isFinite(amount) && amount > 0;
@@ -46,21 +53,26 @@ export function EntryScreen() {
   );
 
   const save = async () => {
-    if (!canSave || state.code === null) return;
-    const result = await addTxn({
-      date: state.date,
-      amount,
-      currency: state.currency,
-      code: state.code,
-      note: state.note.trim() === '' ? null : state.note.trim(),
-    });
-    if ('error' in result && result.error) {
-      show(result.error.message ?? 'Неизвестная ошибка', 'err');
-      return;
+    if (!canSave || state.code === null || busy.current) return;
+    busy.current = true;
+    try {
+      const result = await addTxn({
+        date: state.date,
+        amount,
+        currency: state.currency,
+        code: state.code,
+        note: state.note.trim() === '' ? null : state.note.trim(),
+      });
+      if ('error' in result && result.error) {
+        show(result.error.message ?? 'Неизвестная ошибка', 'err');
+        return;
+      }
+      setCurrencies(pushRecentCurrency(state.currency));
+      dispatch({ type: 'saved' });
+      show('Записано', 'ok');
+    } finally {
+      busy.current = false;
     }
-    setCurrencies(pushRecentCurrency(state.currency));
-    dispatch({ type: 'saved' });
-    show('Записано', 'ok');
   };
 
   return (
@@ -86,9 +98,13 @@ export function EntryScreen() {
       />
       <CurrencyToggle
         value={state.currency}
-        options={currencies}
+        options={options}
         onChange={(v) => {
           dispatch({ type: 'currency', value: v });
+        }}
+        onAdd={(code) => {
+          setCurrencies(pushRecentCurrency(code));
+          dispatch({ type: 'currency', value: code });
         }}
       />
 
