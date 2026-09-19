@@ -33,7 +33,7 @@ PWA, которое со временем заменит таблицу LFS-2026
 Возвращает `code_ref` целиком: `code, title, section, sort_order`,
 отсортировано по `sort_order`. Справочник, приложение кэширует на сессию.
 
-### `app_add_txn(p_date date, p_amount numeric, p_currency text, p_note text, p_code text)`
+### `app_add_txn(p_date date, p_amount numeric, p_currency text, p_code text, p_note text default null)`
 
 - Проверки, каждая с `raise exception` и русским текстом, который
   приложение показывает как есть: сумма больше нуля; код существует в
