@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useSearchParams } from 'react-router';
 import { useGetCodesQuery, useGetMonthTxnsQuery } from '@/api/api';
-import type { MonthTxn } from '@/api/types';
+import type { DisplayTxn, MonthTxn } from '@/api/types';
+import { OfflineBar } from '@/offline/OfflineBar';
+import { selectPending } from '@/offline/state';
+import { toDisplayRow } from '@/offline/toDisplayRow';
 import { TabBar } from '@/shared/TabBar';
 import { Toast } from '@/shared/Toast';
 import { DayList } from './DayList';
@@ -29,7 +33,12 @@ export function MonthScreen() {
 
   const codes = useGetCodesQuery();
   const { data, isLoading, error } = useGetMonthTxnsQuery(monthRangeOf(month));
-  const rows = visibleRows(data ?? []);
+  const pending = useSelector(selectPending);
+  const baseForPending = data?.[0]?.base_currency ?? 'USD';
+  const pendingRows: DisplayTxn[] = pending
+    .filter((i) => i.args.date.startsWith(`${month}-`))
+    .map((i) => toDisplayRow(i, baseForPending));
+  const rows = visibleRows([...pendingRows, ...(data ?? [])]);
   const baseCurrency = rows[0]?.base_currency ?? 'USD';
   const sources = [...new Set(rows.map((r) => r.source))];
   const effectiveSource: SourceFilter = filterSource !== 'all' && sources.includes(filterSource) ? filterSource : 'all';
@@ -59,7 +68,8 @@ export function MonthScreen() {
     [],
   );
 
-  const onRowClick = (txn: MonthTxn) => {
+  const onRowClick = (txn: DisplayTxn) => {
+    if (txn.pending) return;
     setEditing(txn);
   };
 
@@ -127,6 +137,7 @@ export function MonthScreen() {
         />
       )}
       <Toast message={toast?.message ?? null} kind={toast?.kind ?? 'ok'} />
+      <OfflineBar />
       <TabBar />
     </main>
   );

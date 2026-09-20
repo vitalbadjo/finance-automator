@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAddTxnMutation, useGetCodesQuery, useGetMonthTxnsQuery } from '@/api/api';
+import { useDispatch, useStore } from 'react-redux';
+import { useGetCodesQuery, useGetMonthTxnsQuery } from '@/api/api';
 import { supabase } from '@/api/supabase';
+import type { AppDispatch, RootState } from '@/app/store';
+import { OfflineBar } from '@/offline/OfflineBar';
+import { selectPending } from '@/offline/state';
+import { enqueueTxn } from '@/offline/thunks';
 import { Button } from '@/shared/Button';
 import { TabBar } from '@/shared/TabBar';
 import { Toast } from '@/shared/Toast';
@@ -26,7 +31,9 @@ export function EntryScreen() {
 
   const codes = useGetCodesQuery();
   const month = useGetMonthTxnsQuery(monthRange(todayISO()));
-  const [addTxn, { isLoading: saving }] = useAddTxnMutation();
+  const dispatch = useDispatch<AppDispatch>();
+  const store = useStore<RootState>();
+  const [saving, setSaving] = useState(false);
 
   const baseCurrency = month.data?.[0]?.base_currency ?? 'USD';
   const frequent = frequentCodes(month.data ?? [], recentCodes, codes.data ?? []);
@@ -72,9 +79,16 @@ export function EntryScreen() {
         busy={saving}
         autoFocus
         onSubmit={async (v) => {
-          const result = await addTxn({ ...v, id: crypto.randomUUID() });
-          if ('error' in result && result.error) {
-            show(result.error.message ?? 'Неизвестная ошибка', 'err');
+          const before = new Set(selectPending(store.getState()).map((i) => i.id));
+          setSaving(true);
+          try {
+            await dispatch(enqueueTxn(v));
+          } finally {
+            setSaving(false);
+          }
+          const mine = selectPending(store.getState()).find((i) => !before.has(i.id));
+          if (mine?.error) {
+            show(mine.error, 'err');
             return false;
           }
           setCurrencies(pushRecentCurrency(v.currency));
@@ -86,6 +100,7 @@ export function EntryScreen() {
 
       <TodayList />
       <Toast message={toast?.message ?? null} kind={toast?.kind ?? 'ok'} />
+      <OfflineBar />
       <TabBar />
     </main>
   );

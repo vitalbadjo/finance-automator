@@ -1,10 +1,10 @@
-import type { MonthTxn } from '@/api/types';
+import type { DisplayTxn } from '@/api/types';
 import { formatMoney } from '@/shared/format';
 import styles from './MonthScreen.module.scss';
 
 interface Props {
-  txn: MonthTxn;
-  onClick: (txn: MonthTxn) => void;
+  txn: DisplayTxn;
+  onClick: (txn: DisplayTxn) => void;
 }
 
 const SOURCE_LABEL: Record<string, string> = { bybit_card: 'карта', manual: 'вручную' };
@@ -13,6 +13,7 @@ export function TxnRow({ txn, onClick }: Props) {
   const tag = [
     txn.kind === 'transfer' ? 'наличные' : (SOURCE_LABEL[txn.source] ?? txn.source),
     ...(txn.status === 'in_progress' ? ['в обработке'] : []),
+    ...(txn.pending ? ['не отправлено'] : []),
   ].join(' · ');
   const showBase = txn.base_amount !== null && txn.currency !== txn.base_currency;
   return (

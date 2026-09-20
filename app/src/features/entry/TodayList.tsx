@@ -1,4 +1,8 @@
+import { useSelector } from 'react-redux';
 import { useGetMonthTxnsQuery } from '@/api/api';
+import type { DisplayTxn } from '@/api/types';
+import { selectPending } from '@/offline/state';
+import { toDisplayRow } from '@/offline/toDisplayRow';
 import { formatMoney, formatTime } from '@/shared/format';
 import { monthRange, todayISO } from './dates';
 import styles from './TodayList.module.scss';
@@ -8,7 +12,12 @@ const SOURCE_LABEL: Record<string, string> = { manual: 'вручную', bybit_c
 export function TodayList() {
   const today = todayISO();
   const { data, isLoading, error } = useGetMonthTxnsQuery(monthRange(today));
-  const rows = (data ?? []).filter((t) => t.txn_date === today);
+  const pending = useSelector(selectPending);
+  const baseCurrency = data?.[0]?.base_currency ?? 'USD';
+  const pendingRows: DisplayTxn[] = pending
+    .filter((i) => i.args.date === today)
+    .map((i) => toDisplayRow(i, baseCurrency));
+  const rows: DisplayTxn[] = [...pendingRows, ...(data ?? []).filter((t) => t.txn_date === today)];
 
   return (
     <section className={styles.list} aria-label="Сегодня">
@@ -25,7 +34,7 @@ export function TodayList() {
           <span className={styles.name}>
             {t.note ?? t.merchant_name ?? '—'}
             <span className={styles.code}>
-              {t.code ?? '?'} · {SOURCE_LABEL[t.source] ?? t.source}
+              {t.code ?? '?'} · {t.pending ? 'не отправлено' : (SOURCE_LABEL[t.source] ?? t.source)}
             </span>
           </span>
           <span className={styles.sum}>{formatMoney(t.amount, t.currency)}</span>

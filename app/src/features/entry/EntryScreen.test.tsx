@@ -43,7 +43,7 @@ describe('EntryScreen', () => {
     const user = userEvent.setup();
     renderScreen();
     await user.type(await screen.findByLabelText('Сумма'), '350');
-    await user.click(screen.getByRole('button', { name: 'Все категории' }));
+    await user.click(await screen.findByRole('button', { name: 'Все категории' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('radio', { name: 'каф' }));
     await user.click(screen.getByRole('button', { name: 'Сохранить' }));
 
@@ -67,7 +67,7 @@ describe('EntryScreen', () => {
     const user = userEvent.setup();
     renderScreen();
     await user.type(await screen.findByLabelText('Сумма'), '12');
-    await user.click(screen.getByRole('button', { name: 'Все категории' }));
+    await user.click(await screen.findByRole('button', { name: 'Все категории' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('radio', { name: 'прод' }));
     await user.click(screen.getByRole('button', { name: 'Сохранить' }));
 
@@ -92,7 +92,7 @@ describe('EntryScreen', () => {
     expect(screen.getByRole('radio', { name: 'RSD' })).toHaveAttribute('aria-checked', 'true');
 
     await user.type(screen.getByLabelText('Сумма'), '100');
-    await user.click(screen.getByRole('button', { name: 'Все категории' }));
+    await user.click(await screen.findByRole('button', { name: 'Все категории' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('radio', { name: 'каф' }));
     await user.click(screen.getByRole('button', { name: 'Сохранить' }));
 
@@ -170,5 +170,23 @@ describe('EntryScreen', () => {
     await user.click(within(categoryGroup).getByRole('radio', { name: 'прод' }));
     expect(within(categoryGroup).getByRole('radio', { name: 'прод' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('без сети сохраняет в очередь и показывает счётчик', async () => {
+    const user = userEvent.setup();
+    rpc.mockImplementation((fn: string) => {
+      if (fn === 'app_codes') return Promise.resolve({ data: codes, error: null });
+      if (fn === 'app_month_txns') return Promise.resolve({ data: [], error: null });
+      return Promise.reject(new TypeError('Failed to fetch'));
+    });
+    renderScreen();
+    await user.type(await screen.findByLabelText('Сумма'), '350');
+    await user.click(await screen.findByRole('button', { name: 'Все категории' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('radio', { name: 'каф' }));
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Записано');
+    expect(screen.getByRole('button', { name: /Не отправлено: 1/ })).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Сегодня' })).getByText(/не отправлено/)).toBeInTheDocument();
   });
 });
