@@ -114,6 +114,7 @@ describe('EntryScreen', () => {
         kind: 'expense',
         status: 'posted',
         note: null,
+        code_override: null,
       },
       {
         external_id: '2',
@@ -129,6 +130,7 @@ describe('EntryScreen', () => {
         kind: 'expense',
         status: 'posted',
         note: null,
+        code_override: null,
       },
       {
         external_id: '3',
@@ -144,6 +146,7 @@ describe('EntryScreen', () => {
         kind: 'expense',
         status: 'posted',
         note: null,
+        code_override: null,
       },
     ];
     rpc.mockImplementation((fn: string) => {

@@ -26,6 +26,7 @@ const txn = (code: string | null, kind: MonthTxn['kind'] = 'expense'): MonthTxn 
   kind,
   status: 'posted',
   note: null,
+  code_override: null,
 });
 
 describe('frequentCodes', () => {

@@ -21,6 +21,7 @@ export interface MonthTxn {
   kind: TxnKind;
   status: string;
   note: string | null;
+  code_override: string | null;
 }
 
 export interface MonthRange {
@@ -34,6 +35,16 @@ export interface AddTxnArgs {
   currency: string;
   code: string;
   note: string | null;
+}
+
+export interface UpdateTxnArgs extends AddTxnArgs {
+  id: string;
+}
+
+export interface SetCodeArgs {
+  source: string;
+  id: string;
+  code: string | null;
 }
 
 export interface AppError {
