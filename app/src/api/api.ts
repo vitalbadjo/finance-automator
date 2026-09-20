@@ -3,7 +3,7 @@ import type { BaseQueryFn } from '@reduxjs/toolkit/query';
 import type { PostgrestSingleResponse } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { toAppError } from './errors';
-import type { AddTxnArgs, AppError, CodeRef, MonthlyStat, MonthRange, MonthTxn, SetCodeArgs, UpdateTxnArgs } from './types';
+import type { AddTxnWithId, AppError, CodeRef, MonthlyStat, MonthRange, MonthTxn, SetCodeArgs, UpdateTxnArgs } from './types';
 
 interface RpcCall {
   fn: string;
@@ -45,10 +45,13 @@ export const api = createApi({
       query: ({ from, to }) => ({ fn: 'app_monthly_stats', args: { p_from: from, p_to: to } }),
       providesTags: ['Txns'],
     }),
-    addTxn: build.mutation<string, AddTxnArgs>({
-      query: ({ date, amount, currency, code, note }) => ({
+    addTxn: build.mutation<string, AddTxnWithId>({
+      query: ({ id, date, amount, currency, code, note }) => ({
         fn: 'app_add_txn',
-        args: { p_date: date, p_amount: amount, p_currency: currency, p_code: code, p_note: note },
+        args: {
+          p_date: date, p_amount: amount, p_currency: currency,
+          p_code: code, p_note: note, p_id: id,
+        },
       }),
       invalidatesTags: ['Txns'],
     }),

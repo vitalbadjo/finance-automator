@@ -8,8 +8,10 @@ const hasMessage = (e: unknown): e is { message: string } =>
 // пользователю это ни о чём, переводим в понятный текст.
 const isNetworkError = (e: unknown): boolean => e instanceof Error && /fetch/i.test(e.message);
 
+export const NETWORK_ERROR = 'Нет связи с сервером';
+
 export function toAppError(e: unknown): AppError {
-  if (isNetworkError(e)) return { message: 'Нет связи с сервером' };
+  if (isNetworkError(e)) return { message: NETWORK_ERROR };
   if (hasMessage(e) && e.message.trim() !== '') return { message: e.message };
   if (typeof e === 'string' && e.trim() !== '') return { message: e };
   return { message: 'Неизвестная ошибка' };

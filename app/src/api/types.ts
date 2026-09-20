@@ -57,3 +57,10 @@ export interface MonthlyStat {
   amount: number;
   txn_count: number;
 }
+
+export interface AddTxnWithId extends AddTxnArgs {
+  id: string;
+}
+
+// Строка списка: транзакция с сервера или ещё не отправленная запись.
+export type DisplayTxn = MonthTxn & { pending?: boolean };

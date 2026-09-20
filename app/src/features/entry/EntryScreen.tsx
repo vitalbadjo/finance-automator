@@ -72,7 +72,7 @@ export function EntryScreen() {
         busy={saving}
         autoFocus
         onSubmit={async (v) => {
-          const result = await addTxn(v);
+          const result = await addTxn({ ...v, id: crypto.randomUUID() });
           if ('error' in result && result.error) {
             show(result.error.message ?? 'Неизвестная ошибка', 'err');
             return false;
