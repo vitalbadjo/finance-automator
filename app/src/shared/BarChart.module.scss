@@ -1,0 +1,28 @@
+.svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.bar {
+  fill: var(--line);
+  cursor: pointer;
+}
+.barActive {
+  fill: var(--accent);
+}
+.label {
+  fill: var(--muted);
+  font-size: 11px;
+  text-anchor: middle;
+}
+.value {
+  fill: var(--fg);
+  font-size: 12px;
+  text-anchor: middle;
+  font-weight: 600;
+}
+.group:focus-visible .bar {
+  outline: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
