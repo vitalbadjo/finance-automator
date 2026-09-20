@@ -3,7 +3,7 @@ import type { BaseQueryFn } from '@reduxjs/toolkit/query';
 import type { PostgrestSingleResponse } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { NETWORK_ERROR, toAppError } from './errors';
-import type { AddTxnWithId, AppError, CodeRef, MonthlyStat, MonthRange, MonthTxn, SetCodeArgs, UpdateTxnArgs } from './types';
+import type { AddTxnWithId, AppError, CodeRef, CodeUpsertArgs, MonthlyStat, MonthRange, MonthTxn, RuleUpsertArgs, SetCodeArgs, Settings, UpdateTxnArgs } from './types';
 import { withCache, type RpcCall } from '@/offline/cache';
 import { cacheStorage } from '@/offline/db';
 
@@ -37,7 +37,7 @@ const rpcBaseQuery: BaseQueryFn<RpcCall, unknown, AppError> = async ({ fn, args 
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: withCache(rpcBaseQuery, cacheStorage),
-  tagTypes: ['Codes', 'Txns'],
+  tagTypes: ['Codes', 'Txns', 'Settings'],
   endpoints: (build) => ({
     // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- стандартная сигнатура RTK Query для запроса без аргументов
     getCodes: build.query<CodeRef[], void>({
@@ -80,7 +80,43 @@ export const api = createApi({
       }),
       invalidatesTags: ['Txns'],
     }),
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- стандартная сигнатура RTK Query для запроса без аргументов
+    getSettings: build.query<Settings, void>({
+      query: () => ({ fn: 'app_settings' }),
+      providesTags: ['Settings'],
+    }),
+    renameSource: build.mutation<null, { code: string; title: string }>({
+      query: ({ code, title }) => ({ fn: 'app_source_rename', args: { p_code: code, p_title: title } }),
+      invalidatesTags: ['Settings'],
+    }),
+    upsertCode: build.mutation<string, CodeUpsertArgs>({
+      query: ({ code, title, section, sort_order, hidden }) => ({
+        fn: 'app_code_upsert',
+        args: { p_code: code, p_title: title, p_section: section, p_sort_order: sort_order, p_hidden: hidden },
+      }),
+      invalidatesTags: ['Settings', 'Codes'],
+    }),
+    deleteCode: build.mutation<number, string>({
+      query: (code) => ({ fn: 'app_code_delete', args: { p_code: code } }),
+      invalidatesTags: ['Settings', 'Codes'],
+    }),
+    upsertRule: build.mutation<number, RuleUpsertArgs>({
+      query: ({ id, pattern, code, priority, note }) => ({
+        fn: 'app_rule_upsert',
+        args: { p_id: id, p_pattern: pattern, p_code: code, p_priority: priority, p_note: note },
+      }),
+      invalidatesTags: ['Settings', 'Txns'],
+    }),
+    deleteRule: build.mutation<number, number>({
+      query: (id) => ({ fn: 'app_rule_delete', args: { p_id: id } }),
+      invalidatesTags: ['Settings', 'Txns'],
+    }),
   }),
 });
 
-export const { useGetCodesQuery, useGetMonthTxnsQuery, useGetMonthlyStatsQuery, useAddTxnMutation, useUpdateTxnMutation, useDeleteTxnMutation, useSetCodeMutation } = api;
+export const {
+  useGetCodesQuery, useGetMonthTxnsQuery, useGetMonthlyStatsQuery,
+  useAddTxnMutation, useUpdateTxnMutation, useDeleteTxnMutation, useSetCodeMutation,
+  useGetSettingsQuery, useRenameSourceMutation, useUpsertCodeMutation, useDeleteCodeMutation,
+  useUpsertRuleMutation, useDeleteRuleMutation,
+} = api;

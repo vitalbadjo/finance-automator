@@ -67,3 +67,63 @@ export interface AddTxnWithId extends AddTxnArgs {
 
 // Строка списка: транзакция с сервера или ещё не отправленная запись.
 export type DisplayTxn = MonthTxn & { pending?: boolean };
+
+export type CodeSection = 'Базовые' | 'Комфорт' | 'Путешествия' | 'Саморазвитие';
+
+export interface SettingsSource {
+  code: string;
+  title: string;
+  txn_count: number;
+  last_sync_at: string | null;
+  last_sync_ok: boolean | null;
+}
+
+export interface SettingsCode {
+  code: string;
+  title: string;
+  section: CodeSection;
+  sort_order: number;
+  hidden: boolean;
+  in_use: boolean;
+}
+
+export interface MerchantRule {
+  id: number;
+  pattern: string;
+  code: string;
+  priority: number;
+  note: string | null;
+}
+
+export interface UnmappedRow {
+  merchant: string;
+  mcc: string | null;
+  mcc_desc: string | null;
+  txn_count: number;
+  amount: number;
+  last_seen: string;
+}
+
+export interface Settings {
+  base_currency: string;
+  sources: SettingsSource[];
+  codes: SettingsCode[];
+  rules: MerchantRule[];
+  unmapped: UnmappedRow[];
+}
+
+export interface CodeUpsertArgs {
+  code: string;
+  title: string;
+  section: CodeSection;
+  sort_order: number;
+  hidden: boolean;
+}
+
+export interface RuleUpsertArgs {
+  id: number | null;
+  pattern: string;
+  code: string;
+  priority: number;
+  note: string | null;
+}
