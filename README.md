@@ -40,7 +40,8 @@ spent-authomator/
 │   ├── 013_app_edit.sql        app edit RPCs: update/delete manual, set category override
 │   ├── 014_rules_gog.sql        merchant rules for Google & GoG
 │   ├── 015_app_stats.sql        monthly stats RPC for the app
-│   └── 016_app_add_txn_id.sql   client-generated id for app_add_txn, idempotent retry
+│   ├── 016_app_add_txn_id.sql   client-generated id for app_add_txn, idempotent retry
+│   └── 017_app_settings.sql     settings: app_settings, code/rule editing, hidden codes
 ├── app/                         PWA for manual entry (Vite + React + TypeScript)
 │   ├── src/api/                 supabase client, RTK Query API, error mapping, types
 │   ├── src/features/
@@ -102,6 +103,7 @@ db/013_app_edit.sql
 db/014_rules_gog.sql
 db/015_app_stats.sql
 db/016_app_add_txn_id.sql
+db/017_app_settings.sql
 ```
 
 Skip `004`: it is a check, not a migration. `001` uses bare `create table`
@@ -231,6 +233,16 @@ connection returns, `db/016_app_add_txn_id.sql` makes that retry idempotent
 (the same id upserts instead of duplicating). The month and stats screens
 fall back to the last successful response and show a «данные от …» note
 while offline or between refreshes.
+
+**Settings.** The «Ещё» tab (`/settings`) opens a settings screen where theme
+(system, light, dark) is stored on the device only. Base currency is displayed
+read-only. Sources list transaction count and last sync for each, with title
+editable. `/settings/codes` edits category codes (add, rename, reorder, hide
+from the entry screen, delete if unused). `/settings/rules` edits merchant
+rules and shows unmapped merchants from `v_unmapped` so rules can be created
+from them. All writes go through `app_source_rename`, `app_code_upsert`,
+`app_code_delete`, `app_rule_upsert`, `app_rule_delete`; reads through
+`app_settings()`.
 
 ```bash
 cd app
