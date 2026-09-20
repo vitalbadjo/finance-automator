@@ -5,10 +5,12 @@ import { RouterProvider } from 'react-router';
 import { store } from '@/app/store';
 import { router } from '@/app/router';
 import { useSessionListener } from '@/features/auth/useSession';
+import { useOffline } from '@/offline/useOffline';
 import '@/styles/globals.scss';
 
 function App() {
   useSessionListener();
+  useOffline();
   return <RouterProvider router={router} />;
 }
 
