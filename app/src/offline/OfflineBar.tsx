@@ -30,7 +30,7 @@ export function OfflineBar() {
           void dispatch(flushQueue());
         }}
       >
-        Не отправлено: {count}
+        <span aria-live="polite">Не отправлено: {count}</span>
       </button>
       <PendingSheet
         open={open}

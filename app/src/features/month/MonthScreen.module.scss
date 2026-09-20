@@ -1,4 +1,6 @@
 .wrap { max-width: 480px; margin: 0 auto; padding: var(--space-4) var(--space-4) 72px; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+// Плашка «Не отправлено» стоит над таббаром — освобождаем место под неё.
+.withBar { padding-bottom: 112px; }
 .header { display: flex; align-items: center; justify-content: space-between; }
 .month { font-size: 18px; font-weight: 600; margin: 0; }
 .total { font-size: 28px; font-weight: 600; margin: 0; }

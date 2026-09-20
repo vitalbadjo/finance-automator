@@ -49,6 +49,9 @@ export interface SetCodeArgs {
 
 export interface AppError {
   message: string;
+  // Временная ошибка: связи нет, сервер лежит или сессия протухла.
+  // Такую запись не отвергают — её повторяют, а чтение отдают из кэша.
+  transient?: boolean;
 }
 
 export interface MonthlyStat {

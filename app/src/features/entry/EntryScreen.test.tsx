@@ -18,14 +18,17 @@ const codes = [
   { code: 'прод', title: 'Продукты', section: 'Базовые', sort_order: 20 },
 ];
 
-const renderScreen = () =>
+const renderScreen = () => {
+  const store = makeStore();
   render(
-    <Provider store={makeStore()}>
+    <Provider store={store}>
       <MemoryRouter>
         <EntryScreen />
       </MemoryRouter>
     </Provider>,
   );
+  return store;
+};
 
 beforeEach(() => {
   rpc.mockReset();
@@ -65,7 +68,7 @@ describe('EntryScreen', () => {
       return Promise.resolve({ data: null, error: { message: 'Сумма должна быть больше нуля' } });
     });
     const user = userEvent.setup();
-    renderScreen();
+    const store = renderScreen();
     await user.type(await screen.findByLabelText('Сумма'), '12');
     await user.click(await screen.findByRole('button', { name: 'Все категории' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('radio', { name: 'прод' }));
@@ -74,6 +77,34 @@ describe('EntryScreen', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Сумма должна быть больше нуля');
     expect(screen.getByLabelText('Сумма')).toHaveValue('12');
     expect(screen.getByRole('button', { name: 'Сохранить' })).toBeEnabled();
+    // Отказ сервера — не «не отправлено»: запись не должна остаться в очереди.
+    expect(store.getState().offline.pending).toHaveLength(0);
+    expect(screen.queryByText(/Не отправлено/)).not.toBeInTheDocument();
+  });
+
+  it('показывает ошибку, если запись не удалось даже поставить в очередь', async () => {
+    const user = userEvent.setup();
+    const store = renderScreen();
+    await user.type(await screen.findByLabelText('Сумма'), '7');
+    await user.click(await screen.findByRole('button', { name: 'Все категории' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('radio', { name: 'каф' }));
+
+    const real = crypto.getRandomValues.bind(crypto);
+    const realUuid = crypto.randomUUID.bind(crypto);
+    try {
+      // @ts-expect-error — окружение без crypto: enqueueTxn падает целиком
+      crypto.randomUUID = undefined;
+      crypto.getRandomValues = () => {
+        throw new Error('crypto недоступен');
+      };
+      await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+      expect(await screen.findByRole('status')).toHaveTextContent('Не удалось сохранить');
+    } finally {
+      crypto.getRandomValues = real;
+      crypto.randomUUID = realUuid;
+    }
+    expect(screen.getByLabelText('Сумма')).toHaveValue('7');
+    expect(store.getState().offline.pending).toHaveLength(0);
   });
 
   it('не даёт сохранить без категории', async () => {
@@ -172,12 +203,17 @@ describe('EntryScreen', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('без сети сохраняет в очередь и показывает счётчик', async () => {
+  it('без сети (status 0) сохраняет в очередь и показывает счётчик', async () => {
     const user = userEvent.setup();
     rpc.mockImplementation((fn: string) => {
       if (fn === 'app_codes') return Promise.resolve({ data: codes, error: null });
       if (fn === 'app_month_txns') return Promise.resolve({ data: [], error: null });
-      return Promise.reject(new TypeError('Failed to fetch'));
+      // Настоящий ответ supabase-js при обрыве связи: не исключение, а status 0.
+      return Promise.resolve({
+        data: null,
+        error: { message: 'TypeError: Failed to fetch', details: '', hint: '', code: '' },
+        status: 0,
+      });
     });
     renderScreen();
     await user.type(await screen.findByLabelText('Сумма'), '350');

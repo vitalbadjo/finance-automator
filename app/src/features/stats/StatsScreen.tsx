@@ -1,9 +1,12 @@
 import { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useGetCodesQuery, useGetMonthlyStatsQuery } from '@/api/api';
+import { OfflineBar } from '@/offline/OfflineBar';
+import { selectFromCacheAt, selectPendingCount } from '@/offline/state';
 import { BarChart } from '@/shared/BarChart';
 import { Button } from '@/shared/Button';
 import { TabBar } from '@/shared/TabBar';
-import { formatMoney, formatMonthShort, formatMonthTitle } from '@/shared/format';
+import { formatDateTime, formatMoney, formatMonthShort, formatMonthTitle } from '@/shared/format';
 import { todayISO } from '@/features/entry/dates';
 import { Breakdown } from './Breakdown';
 import { Forecast } from './Forecast';
@@ -22,6 +25,8 @@ export function StatsScreen() {
   const codes = useGetCodesQuery();
   const [selected, setSelected] = useState<string | null>(null);
   const [trendCode, setTrendCode] = useState<string | null>(null);
+  const fromCacheAt = useSelector(selectFromCacheAt);
+  const pendingCount = useSelector(selectPendingCount);
 
   const rows = data ?? [];
   const totals = monthTotals(rows);
@@ -32,8 +37,9 @@ export function StatsScreen() {
   const fmt = (v: number) => formatMoney(v, BASE_CURRENCY);
 
   return (
-    <main className={styles.wrap}>
+    <main className={[styles.wrap, pendingCount > 0 ? styles.withBar : ''].join(' ')}>
       <h1 className={styles.title}>Статистика</h1>
+      {fromCacheAt !== null && <p className={styles.muted}>Данные от {formatDateTime(fromCacheAt)}</p>}
       {isLoading && <p className={styles.muted}>Загружаем…</p>}
       {error && <p className={styles.muted}>Не удалось загрузить: {error.message}</p>}
       {data && totals.length === 0 && <p className={styles.muted}>Пока нет данных ни за один месяц</p>}
@@ -77,6 +83,7 @@ export function StatsScreen() {
           />
         </>
       )}
+      <OfflineBar />
       <TabBar />
     </main>
   );

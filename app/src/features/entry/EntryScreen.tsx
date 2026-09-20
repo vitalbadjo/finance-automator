@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { useDispatch, useStore } from 'react-redux';
+import { useDispatch, useSelector, useStore } from 'react-redux';
 import { useGetCodesQuery, useGetMonthTxnsQuery } from '@/api/api';
 import { supabase } from '@/api/supabase';
 import type { AppDispatch, RootState } from '@/app/store';
 import { OfflineBar } from '@/offline/OfflineBar';
-import { selectPending } from '@/offline/state';
-import { enqueueTxn } from '@/offline/thunks';
+import { selectPending, selectPendingCount } from '@/offline/state';
+import { enqueueTxn, removeTxn } from '@/offline/thunks';
 import { Button } from '@/shared/Button';
 import { TabBar } from '@/shared/TabBar';
 import { Toast } from '@/shared/Toast';
@@ -34,6 +34,7 @@ export function EntryScreen() {
   const dispatch = useDispatch<AppDispatch>();
   const store = useStore<RootState>();
   const [saving, setSaving] = useState(false);
+  const pendingCount = useSelector(selectPendingCount);
 
   const baseCurrency = month.data?.[0]?.base_currency ?? 'USD';
   const frequent = frequentCodes(month.data ?? [], recentCodes, codes.data ?? []);
@@ -53,7 +54,7 @@ export function EntryScreen() {
   );
 
   return (
-    <main className={styles.wrap}>
+    <main className={[styles.wrap, pendingCount > 0 ? styles.withBar : ''].join(' ')}>
       <div className={styles.header}>
         <h1 className={styles.title}>Новая трата</h1>
         <Button
@@ -79,22 +80,30 @@ export function EntryScreen() {
         busy={saving}
         autoFocus
         onSubmit={async (v) => {
-          const before = new Set(selectPending(store.getState()).map((i) => i.id));
           setSaving(true);
           try {
-            await dispatch(enqueueTxn(v));
+            const res = await dispatch(enqueueTxn(v));
+            // Сам thunk падает только если запись не удалось даже создать
+            // (например, нет crypto) — тогда её нигде нет, и это ошибка.
+            if (enqueueTxn.rejected.match(res)) {
+              show(`Не удалось сохранить: ${res.error.message ?? 'неизвестная ошибка'}`, 'err');
+              return false;
+            }
+            const mine = selectPending(store.getState()).find((i) => i.id === res.payload);
+            // Сервер ответил отказом сразу — это не «не отправлено», а
+            // неверная запись: убираем её из очереди и оставляем форму.
+            if (mine?.error != null && mine.error !== '') {
+              void dispatch(removeTxn(res.payload));
+              show(mine.error, 'err');
+              return false;
+            }
+            setCurrencies(pushRecentCurrency(v.currency));
+            setRecentCodes(pushRecentCode(v.code));
+            show('Записано', 'ok');
+            return true;
           } finally {
             setSaving(false);
           }
-          const mine = selectPending(store.getState()).find((i) => !before.has(i.id));
-          if (mine?.error) {
-            show(mine.error, 'err');
-            return false;
-          }
-          setCurrencies(pushRecentCurrency(v.currency));
-          setRecentCodes(pushRecentCode(v.code));
-          show('Записано', 'ok');
-          return true;
         }}
       />
 

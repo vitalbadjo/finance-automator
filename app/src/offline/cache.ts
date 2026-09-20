@@ -1,6 +1,6 @@
 import type { BaseQueryFn } from '@reduxjs/toolkit/query';
 import type { AppError } from '@/api/types';
-import { NETWORK_ERROR } from '@/api/errors';
+import { isTransient } from '@/api/errors';
 import type { CacheStorage } from './types';
 import { cacheHit, freshHit } from './state';
 
@@ -24,7 +24,10 @@ export function withCache(
     if (api.type !== 'query') return result;
 
     if ('error' in result && result.error) {
-      if (result.error.message !== NETWORK_ERROR) return result;
+      // Из кэша отвечаем на любую временную ошибку, включая 401: показать
+      // месяц, сохранённый до того, как протухла сессия, — это честно,
+      // а отказ базы («неизвестная категория») кэшем подменять нельзя.
+      if (!isTransient(result.error)) return result;
       const cached = await storage.get(keyOf(args));
       if (!cached) return result;
       api.dispatch(cacheHit(cached.at));

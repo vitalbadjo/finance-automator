@@ -7,8 +7,8 @@ const CACHE = 'cache';
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
-const openDb = (): Promise<IDBDatabase> => {
-  dbPromise ??= new Promise<IDBDatabase>((resolve, reject) => {
+const open = (): Promise<IDBDatabase> =>
+  new Promise<IDBDatabase>((resolve, reject) => {
     if (typeof indexedDB === 'undefined') {
       reject(new Error('IndexedDB недоступен'));
       return;
@@ -26,6 +26,14 @@ const openDb = (): Promise<IDBDatabase> => {
       reject(req.error ?? new Error('Не удалось открыть IndexedDB'));
     };
   });
+
+// Неудачное открытие не запоминаем: иначе одна осечка (например, база
+// заблокирована другой вкладкой) навсегда оставит приложение без очереди.
+const openDb = (): Promise<IDBDatabase> => {
+  dbPromise ??= open().catch((e: unknown) => {
+    dbPromise = null;
+    throw e;
+  });
   return dbPromise;
 };
 
@@ -35,12 +43,24 @@ const request = <T>(store: string, mode: IDBTransactionMode, run: (s: IDBObjectS
       new Promise<T>((resolve, reject) => {
         const tx = db.transaction(store, mode);
         const req = run(tx.objectStore(store));
+        const fail = (): void => {
+          reject(tx.error ?? req.error ?? new Error('Ошибка IndexedDB'));
+        };
+        if (mode === 'readwrite') {
+          // Запись считается удавшейся только после коммита транзакции:
+          // req.onsuccess срабатывает раньше, и следом транзакция ещё
+          // может отвалиться — тогда «сохранённая» запись исчезнет.
+          tx.oncomplete = () => {
+            resolve(req.result as T);
+          };
+          tx.onabort = fail;
+          tx.onerror = fail;
+          return;
+        }
         req.onsuccess = () => {
           resolve(req.result as T);
         };
-        req.onerror = () => {
-          reject(req.error ?? new Error('Ошибка IndexedDB'));
-        };
+        req.onerror = fail;
       }),
   );
 

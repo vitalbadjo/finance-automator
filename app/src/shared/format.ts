@@ -45,6 +45,14 @@ export const formatDayTitle = (iso: string): string => {
   return `${String(Number(d))} ${MONTHS_GEN[Number(m) - 1] ?? m ?? ''}`;
 };
 
+// «20 сентября, 15:40» из ISO-метки времени. День берём по местному
+// времени, а не из текста метки: время рядом тоже местное.
+export const formatDateTime = (iso: string): string => {
+  const d = new Date(iso);
+  const day = `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return `${formatDayTitle(day)}, ${formatTime(iso)}`;
+};
+
 const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 
 // «сен» из YYYY-MM или YYYY-MM-DD

@@ -4,10 +4,11 @@ import { useSearchParams } from 'react-router';
 import { useGetCodesQuery, useGetMonthTxnsQuery } from '@/api/api';
 import type { DisplayTxn, MonthTxn } from '@/api/types';
 import { OfflineBar } from '@/offline/OfflineBar';
-import { selectPending } from '@/offline/state';
+import { selectFromCacheAt, selectPending, selectPendingCount } from '@/offline/state';
 import { toDisplayRow } from '@/offline/toDisplayRow';
 import { TabBar } from '@/shared/TabBar';
 import { Toast } from '@/shared/Toast';
+import { formatDateTime } from '@/shared/format';
 import { DayList } from './DayList';
 import { EditCodeSheet } from './EditCodeSheet';
 import { EditManualSheet } from './EditManualSheet';
@@ -34,6 +35,8 @@ export function MonthScreen() {
   const codes = useGetCodesQuery();
   const { data, isLoading, error } = useGetMonthTxnsQuery(monthRangeOf(month));
   const pending = useSelector(selectPending);
+  const fromCacheAt = useSelector(selectFromCacheAt);
+  const pendingCount = useSelector(selectPendingCount);
   const baseForPending = data?.[0]?.base_currency ?? 'USD';
   const pendingRows: DisplayTxn[] = pending
     .filter((i) => i.args.date.startsWith(`${month}-`))
@@ -74,7 +77,7 @@ export function MonthScreen() {
   };
 
   return (
-    <main className={styles.wrap}>
+    <main className={[styles.wrap, pendingCount > 0 ? styles.withBar : ''].join(' ')}>
       <MonthHeader
         month={month}
         onPrev={() => {
@@ -84,6 +87,7 @@ export function MonthScreen() {
           goTo(shiftMonth(month, 1));
         }}
       />
+      {fromCacheAt !== null && <p className={styles.muted}>Данные от {formatDateTime(fromCacheAt)}</p>}
       {isLoading && <p className={styles.muted}>Загружаем…</p>}
       {error && <p className={styles.muted}>Не удалось загрузить: {error.message}</p>}
       {data && (

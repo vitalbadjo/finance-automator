@@ -1,6 +1,8 @@
 .bar {
   position: fixed;
-  left: 0; right: 0; bottom: 52px;
+  left: 0; right: 0;
+  // Таббар сам поднят над домашней полосой — плашка встаёт ровно над ним.
+  bottom: calc(52px + env(safe-area-inset-bottom));
   display: block;
   width: 100%;
   min-height: 36px;

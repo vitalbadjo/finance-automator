@@ -2,7 +2,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import type { BaseQueryFn } from '@reduxjs/toolkit/query';
 import type { PostgrestSingleResponse } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import { toAppError } from './errors';
+import { NETWORK_ERROR, toAppError } from './errors';
 import type { AddTxnWithId, AppError, CodeRef, MonthlyStat, MonthRange, MonthTxn, SetCodeArgs, UpdateTxnArgs } from './types';
 import { withCache, type RpcCall } from '@/offline/cache';
 import { cacheStorage } from '@/offline/db';
@@ -13,14 +13,24 @@ import { cacheStorage } from '@/offline/db';
 // приводим к PostgrestSingleResponse<unknown>, чтобы не работать с `any`.
 const rpcBaseQuery: BaseQueryFn<RpcCall, unknown, AppError> = async ({ fn, args }) => {
   try {
-    const { data, error } = (await supabase.rpc(
+    const { data, error, status } = (await supabase.rpc(
       fn,
       args ?? {},
     )) as PostgrestSingleResponse<unknown>;
-    if (error) return { error: toAppError(error) };
+    if (error) {
+      // supabase-js при обрыве связи не бросает: postgrest-js ловит fetch сам
+      // и возвращает обычный ответ с status 0 и английским текстом. Поэтому
+      // различаем по статусу, а не по тексту сообщения.
+      if (status === 0) return { error: { message: NETWORK_ERROR, transient: true } };
+      // 401 — протухшая сессия (её обновят), 5xx — сервер лежит: и то и другое
+      // проходит, а значит запись нельзя считать отвергнутой.
+      if (status === 401 || status >= 500) return { error: { ...toAppError(error), transient: true } };
+      return { error: toAppError(error) };
+    }
     return { data };
   } catch (e) {
-    return { error: toAppError(e) };
+    // Брошенное исключение тоже не приговор: чаще всего это тот же обрыв связи.
+    return { error: { ...toAppError(e), transient: true } };
   }
 };
 

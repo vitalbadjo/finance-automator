@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { makeStore } from '@/app/store';
+import type { AppStore } from '@/app/store';
 import type { MonthTxn } from '@/api/types';
+import { cacheHit } from '@/offline/state';
 import { MonthScreen } from './MonthScreen';
 
 const rpc = vi.fn();
@@ -44,9 +46,9 @@ const fixtures = [
   row({ external_id: 'nocode-1', merchant_name: 'GOG', code: null, base_amount: 4, amount: 4 }),
 ];
 
-const renderAt = (path: string) =>
+const renderAt = (path: string, store: AppStore = makeStore()) =>
   render(
-    <Provider store={makeStore()}>
+    <Provider store={store}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/month" element={<MonthScreen />} />
@@ -76,6 +78,15 @@ describe('MonthScreen', () => {
     expect(screen.getByText('18 сентября · 3,00 USD')).toBeInTheDocument();
     expect(screen.queryByText('Declined')).not.toBeInTheDocument();
     expect(screen.getByText('наличные')).toBeInTheDocument();
+  });
+
+  it('показывает отметку «Данные от», когда ответ пришёл из кэша', () => {
+    // Запрос не завершается: свежий ответ снял бы отметку.
+    rpc.mockImplementation(() => new Promise(() => undefined));
+    const store = makeStore();
+    store.dispatch(cacheHit('2026-09-20T15:40:00+02:00'));
+    renderAt('/month?m=2026-09', store);
+    expect(screen.getByText(/Данные от/)).toBeInTheDocument();
   });
 
   it('чип «?» фильтрует список записями без кода', async () => {

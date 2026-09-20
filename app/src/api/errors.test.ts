@@ -1,4 +1,4 @@
-import { toAppError } from './errors';
+import { NETWORK_ERROR, isTransient, toAppError } from './errors';
 
 describe('toAppError', () => {
   it('берёт message у ошибки Supabase/PostgREST', () => {
@@ -14,5 +14,16 @@ describe('toAppError', () => {
   it('даёт общий текст для всего остального', () => {
     expect(toAppError(null)).toEqual({ message: 'Неизвестная ошибка' });
     expect(toAppError('строка')).toEqual({ message: 'строка' });
+  });
+});
+
+describe('isTransient', () => {
+  it('временные — обрыв связи и всё, что помечено transient', () => {
+    expect(isTransient({ message: NETWORK_ERROR })).toBe(true);
+    expect(isTransient({ message: 'JWT expired', transient: true })).toBe(true);
+  });
+
+  it('отказ базы временным не считается', () => {
+    expect(isTransient({ message: 'Неизвестная категория: ххх' })).toBe(false);
   });
 });

@@ -10,6 +10,10 @@ const isNetworkError = (e: unknown): boolean => e instanceof Error && /fetch/i.t
 
 export const NETWORK_ERROR = 'Нет связи с сервером';
 
+// Временные ошибки не означают отказ базы: запись остаётся в очереди,
+// а чтение можно отдать из кэша.
+export const isTransient = (e: AppError): boolean => e.transient === true || e.message === NETWORK_ERROR;
+
 export function toAppError(e: unknown): AppError {
   if (isNetworkError(e)) return { message: NETWORK_ERROR };
   if (hasMessage(e) && e.message.trim() !== '') return { message: e.message };
