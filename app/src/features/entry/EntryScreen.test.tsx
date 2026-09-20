@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
+import { MemoryRouter } from 'react-router';
 import { makeStore } from '@/app/store';
 import { EntryScreen } from './EntryScreen';
 
@@ -20,7 +21,9 @@ const codes = [
 const renderScreen = () =>
   render(
     <Provider store={makeStore()}>
-      <EntryScreen />
+      <MemoryRouter>
+        <EntryScreen />
+      </MemoryRouter>
     </Provider>,
   );
 
@@ -114,6 +117,7 @@ describe('EntryScreen', () => {
         kind: 'expense',
         status: 'posted',
         note: null,
+        code_override: null,
       },
       {
         external_id: '2',
@@ -129,6 +133,7 @@ describe('EntryScreen', () => {
         kind: 'expense',
         status: 'posted',
         note: null,
+        code_override: null,
       },
       {
         external_id: '3',
@@ -144,6 +149,7 @@ describe('EntryScreen', () => {
         kind: 'expense',
         status: 'posted',
         note: null,
+        code_override: null,
       },
     ];
     rpc.mockImplementation((fn: string) => {

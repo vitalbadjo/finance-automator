@@ -1,15 +1,12 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAddTxnMutation, useGetCodesQuery, useGetMonthTxnsQuery } from '@/api/api';
 import { supabase } from '@/api/supabase';
 import { Button } from '@/shared/Button';
-import { Field } from '@/shared/Field';
+import { TabBar } from '@/shared/TabBar';
 import { Toast } from '@/shared/Toast';
-import { AmountField } from './AmountField';
-import { CodePicker } from './CodePicker';
-import { CurrencyToggle } from './CurrencyToggle';
-import { DatePicker } from './DatePicker';
+import { EntryForm } from './EntryForm';
 import { TodayList } from './TodayList';
-import { entryReducer, initialEntry } from './entryReducer';
+import { initialEntry } from './entryReducer';
 import { frequentCodes } from './frequentCodes';
 import { pushRecentCurrency, readRecentCurrencies } from './recentCurrencies';
 import { pushRecentCode, readRecentCodes } from './recentCodes';
@@ -24,22 +21,14 @@ interface ToastState {
 export function EntryScreen() {
   const [currencies, setCurrencies] = useState(readRecentCurrencies);
   const [recentCodes, setRecentCodes] = useState(readRecentCodes);
-  const [state, dispatch] = useReducer(entryReducer, initialEntry(currencies[0] ?? 'USD', todayISO()));
   const [toast, setToast] = useState<ToastState | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const busy = useRef(false);
 
   const codes = useGetCodesQuery();
   const month = useGetMonthTxnsQuery(monthRange(todayISO()));
   const [addTxn, { isLoading: saving }] = useAddTxnMutation();
 
   const baseCurrency = month.data?.[0]?.base_currency ?? 'USD';
-  const options = [...currencies.slice(0, 3), baseCurrency, state.currency].filter(
-    (c, i, arr) => arr.indexOf(c) === i,
-  );
-
-  const amount = Number(state.amount);
-  const canSave = !saving && state.code !== null && Number.isFinite(amount) && amount > 0;
   const frequent = frequentCodes(month.data ?? [], recentCodes, codes.data ?? []);
 
   const show = (message: string, kind: 'ok' | 'err') => {
@@ -56,30 +45,6 @@ export function EntryScreen() {
     [],
   );
 
-  const save = async () => {
-    if (!canSave || state.code === null || busy.current) return;
-    busy.current = true;
-    try {
-      const result = await addTxn({
-        date: state.date,
-        amount,
-        currency: state.currency,
-        code: state.code,
-        note: state.note.trim() === '' ? null : state.note.trim(),
-      });
-      if ('error' in result && result.error) {
-        show(result.error.message ?? 'Неизвестная ошибка', 'err');
-        return;
-      }
-      setCurrencies(pushRecentCurrency(state.currency));
-      setRecentCodes(pushRecentCode(state.code));
-      dispatch({ type: 'saved' });
-      show('Записано', 'ok');
-    } finally {
-      busy.current = false;
-    }
-  };
-
   return (
     <main className={styles.wrap}>
       <div className={styles.header}>
@@ -94,66 +59,34 @@ export function EntryScreen() {
         </Button>
       </div>
 
-      <AmountField
-        value={state.amount}
-        autoFocus
-        onChange={(v) => {
-          dispatch({ type: 'amount', value: v });
-        }}
-      />
-      <CurrencyToggle
-        value={state.currency}
-        options={options}
-        onChange={(v) => {
-          dispatch({ type: 'currency', value: v });
-        }}
-        onAdd={(code) => {
+      <EntryForm
+        initial={initialEntry(currencies[0] ?? 'USD', todayISO())}
+        codes={codes.data}
+        codesError={codes.error ? (codes.error.message ?? 'Неизвестная ошибка') : null}
+        frequent={frequent}
+        currencies={[...currencies.slice(0, 3), baseCurrency]}
+        onAddCurrency={(code) => {
           setCurrencies(pushRecentCurrency(code));
-          dispatch({ type: 'currency', value: code });
+        }}
+        submitLabel="Сохранить"
+        busy={saving}
+        autoFocus
+        onSubmit={async (v) => {
+          const result = await addTxn(v);
+          if ('error' in result && result.error) {
+            show(result.error.message ?? 'Неизвестная ошибка', 'err');
+            return false;
+          }
+          setCurrencies(pushRecentCurrency(v.currency));
+          setRecentCodes(pushRecentCode(v.code));
+          show('Записано', 'ok');
+          return true;
         }}
       />
-
-      {codes.isLoading && <p className={styles.muted}>Загружаем категории…</p>}
-      {codes.error && <p className={styles.muted}>Категории не загрузились: {codes.error.message}</p>}
-      {codes.data && (
-        <CodePicker
-          codes={codes.data}
-          value={state.code}
-          onChange={(v) => {
-            dispatch({ type: 'code', value: v });
-          }}
-          frequent={frequent}
-        />
-      )}
-
-      <DatePicker
-        value={state.date}
-        onChange={(v) => {
-          dispatch({ type: 'date', value: v });
-        }}
-      />
-      <Field
-        id="note"
-        label="Заметка"
-        placeholder="необязательно"
-        value={state.note}
-        onChange={(e) => {
-          dispatch({ type: 'note', value: e.target.value });
-        }}
-      />
-
-      <Button
-        variant="primary"
-        disabled={!canSave}
-        onClick={() => {
-          void save();
-        }}
-      >
-        {saving ? 'Сохраняем…' : 'Сохранить'}
-      </Button>
 
       <TodayList />
       <Toast message={toast?.message ?? null} kind={toast?.kind ?? 'ok'} />
+      <TabBar />
     </main>
   );
 }
