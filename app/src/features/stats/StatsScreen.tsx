@@ -7,7 +7,7 @@ import { formatMoney, formatMonthShort, formatMonthTitle } from '@/shared/format
 import { todayISO } from '@/features/entry/dates';
 import { Breakdown } from './Breakdown';
 import { Forecast } from './Forecast';
-import { codeTrend, monthBreakdown, monthTotals, statsRange } from './stats';
+import { codeTrend, monthBreakdown, monthTotals, pickMonth, statsRange } from './stats';
 import styles from './StatsScreen.module.scss';
 
 // Базовая валюта та же, что у экрана месяца; здесь строки уже в ней,
@@ -27,7 +27,7 @@ export function StatsScreen() {
   const rows = data ?? [];
   const totals = monthTotals(rows);
   const months = totals.map((t) => t.month);
-  const month = selected ?? (months.includes(currentMonth) ? currentMonth : (months[months.length - 1] ?? currentMonth));
+  const month = pickMonth(selected, months, currentMonth);
   const total = totals.find((t) => t.month === month)?.total ?? 0;
   const titles = new Map((codes.data ?? []).map((c) => [c.code, c.title] as const));
   const fmt = (v: number) => formatMoney(v, BASE_CURRENCY);

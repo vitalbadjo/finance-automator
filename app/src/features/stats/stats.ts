@@ -33,6 +33,24 @@ const round1 = (n: number): number => Math.round(n * 10) / 10;
 
 export const toYM = (monthISO: string): string => monthISO.slice(0, 7);
 
+// Выбранный месяц может исчезнуть из данных после рефетча (например, диапазон
+// сдвинулся) — тогда откатываемся на текущий месяц, а если и его нет, на последний
+// доступный.
+export function pickMonth(selected: string | null, months: string[], currentMonth: string): string {
+  if (selected !== null && months.includes(selected)) return selected;
+  if (months.includes(currentMonth)) return currentMonth;
+  return months[months.length - 1] ?? currentMonth;
+}
+
+// Русское склонение «день/дня/дней» по числу n.
+export function pluralDays(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'день';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'дня';
+  return 'дней';
+}
+
 export function monthTotals(rows: MonthlyStat[]): MonthTotal[] {
   const acc = new Map<string, number>();
   for (const row of rows) {

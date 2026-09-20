@@ -1,6 +1,6 @@
 import type { MonthlyStat } from '@/api/types';
 import { formatMonthShort } from '@/shared/format';
-import { codeTrend, forecast, monthBreakdown, monthTotals, statsRange, toYM } from './stats';
+import { codeTrend, forecast, monthBreakdown, monthTotals, pickMonth, pluralDays, statsRange, toYM } from './stats';
 
 describe('statsRange', () => {
   it('12 месяцев назад от текущего, включая текущий', () => {
@@ -79,5 +79,30 @@ describe('forecast', () => {
 describe('toYM', () => {
   it('обрезает день', () => {
     expect(toYM('2026-09-01')).toBe('2026-09');
+  });
+});
+
+describe('pickMonth', () => {
+  const months = ['2026-07', '2026-08', '2026-09'];
+  it('выбранный месяц есть в данных — используем его', () => {
+    expect(pickMonth('2026-08', months, '2026-09')).toBe('2026-08');
+  });
+  it('выбранный месяц пропал из данных — откат на текущий', () => {
+    expect(pickMonth('2026-08', ['2026-07', '2026-09'], '2026-09')).toBe('2026-09');
+  });
+  it('текущего месяца тоже нет — последний доступный', () => {
+    expect(pickMonth(null, ['2026-06', '2026-07'], '2026-09')).toBe('2026-07');
+  });
+});
+
+describe('pluralDays', () => {
+  it('склоняет по стандартному правилу', () => {
+    expect(pluralDays(1)).toBe('день');
+    expect(pluralDays(2)).toBe('дня');
+    expect(pluralDays(5)).toBe('дней');
+    expect(pluralDays(11)).toBe('дней');
+    expect(pluralDays(21)).toBe('день');
+    expect(pluralDays(22)).toBe('дня');
+    expect(pluralDays(25)).toBe('дней');
   });
 });
