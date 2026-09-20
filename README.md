@@ -39,7 +39,8 @@ spent-authomator/
 │   ├── 012_app.sql             app RPC functions: codes, add txn, month txns
 │   ├── 013_app_edit.sql        app edit RPCs: update/delete manual, set category override
 │   ├── 014_rules_gog.sql        merchant rules for Google & GoG
-│   └── 015_app_stats.sql        monthly stats RPC for the app
+│   ├── 015_app_stats.sql        monthly stats RPC for the app
+│   └── 016_app_add_txn_id.sql   client-generated id for app_add_txn, idempotent retry
 ├── app/                         PWA for manual entry (Vite + React + TypeScript)
 │   ├── src/api/                 supabase client, RTK Query API, error mapping, types
 │   ├── src/features/
@@ -47,6 +48,7 @@ spent-authomator/
 │   │   ├── entry/                amount/date/code entry form, today's list, reducer
 │   │   ├── month/                month screen: summary, day list, edit sheets
 │   │   └── stats/                stats screen: monthly bars, breakdown, trend, forecast
+│   ├── src/offline/              offline queue, read cache, pending bar
 │   ├── src/shared/               Button, Field, Toast, formatting helpers
 │   └── src/styles/               SCSS tokens and global styles
 ├── supabase/
@@ -99,6 +101,7 @@ db/012_app.sql
 db/013_app_edit.sql
 db/014_rules_gog.sql
 db/015_app_stats.sql
+db/016_app_add_txn_id.sql
 ```
 
 Skip `004`: it is a check, not a migration. `001` uses bare `create table`
@@ -219,6 +222,13 @@ entries can be edited and deleted there, and any row's category can be overridde
 (`code_override`), which survives syncs.
 
 `/stats` shows monthly totals, the selected month's category breakdown with shares, a per-category trend and an end-of-month forecast (`app_monthly_stats`).
+
+**Offline.** Adding an expense works without a network connection: the entry
+is queued in IndexedDB with a client-generated id and sent once the
+connection returns, `db/016_app_add_txn_id.sql` makes that retry idempotent
+(the same id upserts instead of duplicating). The month and stats screens
+fall back to the last successful response and show a «данные от …» note
+while offline or between refreshes.
 
 ```bash
 cd app
