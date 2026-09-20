@@ -20,6 +20,7 @@ const H = 140;
 const TOP = 18; // место под значение активного столбца
 const BOTTOM = 18; // место под подписи
 const GAP = 6;
+const HALF = 40; // половина ширины подписи значения, для клампа у краёв svg
 
 export function BarChart({ items, activeKey, onSelect, formatValue }: Props) {
   if (items.length === 0) return null;
@@ -44,6 +45,7 @@ export function BarChart({ items, activeKey, onSelect, formatValue }: Props) {
         const x = i * slot + GAP / 2;
         const y = TOP + plotH - h;
         const active = item.key === activeKey;
+        const cx = x + barW / 2;
         return (
           <g
             key={item.key}
@@ -59,6 +61,7 @@ export function BarChart({ items, activeKey, onSelect, formatValue }: Props) {
               onKey(e, item.key);
             }}
           >
+            <rect x={i * slot} y={TOP} width={slot} height={plotH} fill="transparent" />
             <rect
               className={[styles.bar, active ? styles.barActive : ''].join(' ')}
               x={x}
@@ -71,7 +74,11 @@ export function BarChart({ items, activeKey, onSelect, formatValue }: Props) {
               {item.label}
             </text>
             {active ? (
-              <text className={styles.value} x={x + barW / 2} y={Math.max(12, y - 5)}>
+              <text
+                className={styles.value}
+                x={Math.min(Math.max(cx, HALF), W - HALF)}
+                y={Math.max(12, y - 5)}
+              >
                 {formatValue(item.value)}
               </text>
             ) : null}

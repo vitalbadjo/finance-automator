@@ -31,4 +31,19 @@ describe('BarChart', () => {
     const { container } = render(<BarChart items={[]} activeKey={null} onSelect={vi.fn()} formatValue={String} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it('подпись значения не вылезает за края svg', () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ key: `k${String(i)}`, label: String(i), value: i + 1 }));
+    const { container: lastContainer } = render(
+      <BarChart items={many} activeKey="k11" onSelect={vi.fn()} formatValue={String} />,
+    );
+    const lastValue = lastContainer.querySelector('text[class*="_value_"]');
+    expect(Number(lastValue?.getAttribute('x'))).toBeLessThanOrEqual(280);
+
+    const { container: firstContainer } = render(
+      <BarChart items={many} activeKey="k0" onSelect={vi.fn()} formatValue={String} />,
+    );
+    const firstValue = firstContainer.querySelector('text[class*="_value_"]');
+    expect(Number(firstValue?.getAttribute('x'))).toBeGreaterThanOrEqual(40);
+  });
 });

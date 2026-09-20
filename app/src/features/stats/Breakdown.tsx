@@ -32,7 +32,7 @@ export function Breakdown({ rows, titles, baseCurrency, onSelect }: Props) {
               </span>
               <span className={styles.sum}>
                 {formatMoney(row.amount, baseCurrency)}
-                <span className={styles.share}>{row.share}%</span>
+                <span className={styles.share}>{row.share.toLocaleString('ru-RU')}%</span>
               </span>
             </button>
           </li>

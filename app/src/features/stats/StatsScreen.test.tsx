@@ -53,7 +53,8 @@ describe('StatsScreen', () => {
     const items = within(list).getAllByRole('listitem');
     expect(items[0]).toHaveTextContent(/каф/);
     expect(items[0]).toHaveTextContent(/Кафе, рестораны/);
-    expect(items[0]).toHaveTextContent(/60/);
+    expect(items[0]).toHaveTextContent(/60\s?%/);
+    expect(items[0]?.querySelector('[style*="width: 60%"]')).not.toBeNull();
     expect(items[2]).toHaveTextContent(/без категории/);
   });
 

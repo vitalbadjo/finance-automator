@@ -211,7 +211,7 @@ account, and `foreignTransactionFee` is 2% of the net purchase inside it.
 `app/` is a PWA for adding manual entries and, later, browsing and charts.
 Vite + React + TypeScript, Redux Toolkit Query over `supabase.rpc()`, SCSS
 modules. It talks to the database only through `public.app_*` functions
-(`db/012_app.sql` and `db/013_app_edit.sql`) granted to `authenticated`; the
+(`db/012_app.sql`, `db/013_app_edit.sql` and `db/015_app_stats.sql`) granted to `authenticated`; the
 `spend` schema stays closed. Design: `docs/superpowers/specs/2026-09-19-app-entry-design.md`.
 
 `/month` shows the month total, per-category sums and a day-grouped list; manual

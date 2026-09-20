@@ -10,10 +10,9 @@ import { Forecast } from './Forecast';
 import { codeTrend, monthBreakdown, monthTotals, pickMonth, statsRange } from './stats';
 import styles from './StatsScreen.module.scss';
 
-// Базовая валюта та же, что у экрана месяца; здесь строки уже в ней,
-// а сам код валюты в ответе не приходит — берём из app_config через
-// первый ответ app_month_txns было бы лишним запросом, поэтому USD как
-// у остальных экранов до появления настроек.
+// Ответ app_monthly_stats не содержит код базовой валюты, а отдельный
+// запрос ради одного кода не стоит того. Базовая валюта сейчас USD
+// (spend.app_config); переезд на настройку — задача «Настройки».
 const BASE_CURRENCY = 'USD';
 
 export function StatsScreen() {
