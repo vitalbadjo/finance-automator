@@ -11,18 +11,25 @@ interface Props {
   children: ReactNode;
 }
 
+// Стек открытых листов: вложенный Escape должен закрывать только верхний.
+const stack: symbol[] = [];
+
 // Нижний лист без сторонних библиотек: рендерим через portal в body, блокируем
 // прокрутку страницы, пока лист открыт, закрываем по Escape и клику по фону.
 export function Sheet({ open, title, onClose, children }: Props) {
   useEffect(() => {
     if (!open) return;
+    const id = Symbol('sheet');
+    stack.push(id);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && stack[stack.length - 1] === id) onClose();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => {
+      const idx = stack.indexOf(id);
+      if (idx !== -1) stack.splice(idx, 1);
       document.body.style.overflow = prevOverflow;
       document.removeEventListener('keydown', onKeyDown);
     };

@@ -32,15 +32,17 @@ export function MonthScreen() {
   const rows = visibleRows(data ?? []);
   const baseCurrency = rows[0]?.base_currency ?? 'USD';
   const sources = [...new Set(rows.map((r) => r.source))];
-  const summary = summarize(filterSource === 'all' ? rows : rows.filter((r) => r.source === filterSource));
+  const effectiveSource: SourceFilter = filterSource !== 'all' && sources.includes(filterSource) ? filterSource : 'all';
+  const summary = summarize(effectiveSource === 'all' ? rows : rows.filter((r) => r.source === effectiveSource));
   const listed = rows.filter(
-    (r) => (filterSource === 'all' || r.source === filterSource) && (filterCode === null || r.code === filterCode),
+    (r) => (effectiveSource === 'all' || r.source === effectiveSource) && (filterCode === null || (r.code ?? '?') === filterCode),
   );
   const days = groupByDay(listed);
 
   const goTo = (ym: string) => {
     setParams({ m: ym });
     setFilterCode(null);
+    setFilterSource('all');
   };
 
   const show = (message: string, kind: 'ok' | 'err') => {
@@ -82,7 +84,7 @@ export function MonthScreen() {
             sources={sources}
             filterCode={filterCode}
             onFilterCode={setFilterCode}
-            filterSource={filterSource}
+            filterSource={effectiveSource}
             onFilterSource={setFilterSource}
           />
           <DayList days={days} baseCurrency={baseCurrency} onRowClick={onRowClick} />

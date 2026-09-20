@@ -41,6 +41,7 @@ const fixtures = [
   row({ external_id: 'man-1', source: 'manual', note: 'кофе', code: 'каф', base_amount: 3, amount: 3, txn_date: '2026-09-18', txn_at: '2026-09-17T22:00:00+00:00' }),
   row({ external_id: 'cash-1', kind: 'transfer', merchant_name: 'ATM', code: null, base_amount: 100, amount: 100, txn_date: '2026-09-18', txn_at: '2026-09-18T09:00:00+00:00' }),
   row({ external_id: 'void-1', kind: 'void', status: 'failed', merchant_name: 'Declined', base_amount: 9 }),
+  row({ external_id: 'nocode-1', merchant_name: 'GOG', code: null, base_amount: 4, amount: 4 }),
 ];
 
 const renderAt = (path: string) =>
@@ -67,14 +68,25 @@ beforeEach(() => {
 describe('MonthScreen', () => {
   it('показывает итог, категории, снятие и список по дням; отказ скрыт', async () => {
     renderAt('/month?m=2026-09');
-    expect(await screen.findByRole('heading', { name: /38,00 USD/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /42,00 USD/ })).toBeInTheDocument();
     expect(screen.getByText('Сентябрь 2026')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /каф.*28,00/ })).toBeInTheDocument();
     expect(screen.getByText(/Снято наличными.*100,00 USD/)).toBeInTheDocument();
-    expect(screen.getByText('19 сентября · 35,00 USD')).toBeInTheDocument();
+    expect(screen.getByText('19 сентября · 39,00 USD')).toBeInTheDocument();
     expect(screen.getByText('18 сентября · 3,00 USD')).toBeInTheDocument();
     expect(screen.queryByText('Declined')).not.toBeInTheDocument();
     expect(screen.getByText('наличные')).toBeInTheDocument();
+  });
+
+  it('чип «?» фильтрует список записями без кода', async () => {
+    const user = userEvent.setup();
+    renderAt('/month?m=2026-09');
+    const totals = within(await screen.findByRole('region', { name: 'Итоги' }));
+    const chip = totals.getByRole('button', { name: /\?.*4,00/ });
+    await user.click(chip);
+    expect(screen.getByText('GOG')).toBeInTheDocument();
+    expect(screen.queryByText('Lidl')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cafe')).not.toBeInTheDocument();
   });
 
   it('тап по категории фильтрует список, повторный снимает', async () => {
@@ -100,6 +112,28 @@ describe('MonthScreen', () => {
     expect(lastCall?.[0]).toBe('app_month_txns');
     expect(lastCall?.[1].p_from).toMatch(/-01$/);
     expect(screen.getByRole('button', { name: 'Следующий месяц' })).toBeEnabled();
+  });
+
+  it('фильтр источника не оставляет пустой экран при смене месяца', async () => {
+    const user = userEvent.setup();
+    const now = new Date();
+    const ym = `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const cardOnly = fixtures.filter((f) => f.source === 'bybit_card');
+    rpc.mockImplementation((fn: string, args?: { p_from: string }) => {
+      if (fn === 'app_codes') return Promise.resolve({ data: codes, error: null });
+      if (fn === 'app_month_txns') {
+        const isCurrentMonth = args?.p_from.startsWith(ym) ?? false;
+        return Promise.resolve({ data: isCurrentMonth ? fixtures : cardOnly, error: null });
+      }
+      return Promise.resolve({ data: null, error: { message: `нет функции ${fn}` } });
+    });
+    renderAt(`/month?m=${ym}`);
+    await user.click(await screen.findByRole('button', { name: 'вручную' }));
+    await user.click(screen.getByRole('button', { name: 'Предыдущий месяц' }));
+    await waitFor(() => {
+      expect(screen.getByText('Lidl')).toBeInTheDocument();
+    });
+    expect(screen.queryAllByRole('button', { pressed: true })).toHaveLength(0);
   });
 });
 

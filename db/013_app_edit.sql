@@ -79,6 +79,7 @@ declare
   v_title text;
   v_note  text := nullif(btrim(coalesce(p_note, '')), '');
   v_cur   text := upper(btrim(coalesce(p_currency, '')));
+  v_n     int;
 begin
   perform spend.assert_manual(p_id);
 
@@ -106,6 +107,11 @@ begin
     payload       = payload || jsonb_build_object('note', v_note),
     last_seen_at  = now()
   where source = 'manual' and external_id = p_id;
+
+  get diagnostics v_n = row_count;
+  if v_n = 0 then
+    raise exception 'Запись не найдена';
+  end if;
 
   return p_id;
 end;

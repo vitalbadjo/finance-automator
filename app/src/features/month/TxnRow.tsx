@@ -10,8 +10,10 @@ interface Props {
 const SOURCE_LABEL: Record<string, string> = { bybit_card: 'карта', manual: 'вручную' };
 
 export function TxnRow({ txn, onClick }: Props) {
-  const tag =
-    txn.kind === 'transfer' ? 'наличные' : txn.status === 'in_progress' ? 'в обработке' : (SOURCE_LABEL[txn.source] ?? txn.source);
+  const tag = [
+    txn.kind === 'transfer' ? 'наличные' : (SOURCE_LABEL[txn.source] ?? txn.source),
+    ...(txn.status === 'in_progress' ? ['в обработке'] : []),
+  ].join(' · ');
   const showBase = txn.base_amount !== null && txn.currency !== txn.base_currency;
   return (
     <button
