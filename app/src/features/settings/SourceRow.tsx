@@ -37,7 +37,13 @@ export function RenameSourceSheet({ source, onClose, onDone, onError }: SheetPro
   const [rename, { isLoading }] = useRenameSourceMutation();
 
   return (
-    <Sheet open title="Источник" onClose={onClose}>
+    <Sheet
+      open
+      title="Источник"
+      onClose={() => {
+        if (!isLoading) onClose();
+      }}
+    >
       <form
         className={styles.form}
         onSubmit={(e) => {

@@ -10,6 +10,7 @@ import styles from './SettingsScreen.module.scss';
 interface Props {
   // null — создание новой категории
   code: SettingsCode | null;
+  existingCodes: string[];
   onClose: () => void;
   onDone: (message: string) => void;
   onError: (message: string) => void;
@@ -19,7 +20,7 @@ const isSection = (v: string): v is CodeSection => (SECTIONS as readonly string[
 
 // Шторка категории. Код правится только при создании: это идентификатор,
 // на который ссылаются правила, переопределения и таблица пользователя.
-export function CodeSheet({ code, onClose, onDone, onError }: Props) {
+export function CodeSheet({ code, existingCodes, onClose, onDone, onError }: Props) {
   const [id, setId] = useState(code?.code ?? '');
   const [title, setTitle] = useState(code?.title ?? '');
   const [section, setSection] = useState<CodeSection>(code?.section ?? 'Базовые');
@@ -31,18 +32,33 @@ export function CodeSheet({ code, onClose, onDone, onError }: Props) {
   const busy = saving || removing;
 
   return (
-    <Sheet open title={code?.code ?? 'Новая категория'} onClose={onClose}>
+    <Sheet
+      open
+      title={code?.code ?? 'Новая категория'}
+      onClose={() => {
+        if (!busy) onClose();
+      }}
+    >
       <form
         className={styles.form}
         onSubmit={(e) => {
           e.preventDefault();
+          const trimmedId = id.trim();
+          if (code === null && existingCodes.includes(trimmedId)) {
+            onError('Такой код уже есть');
+            return;
+          }
+          const sortOrder = Number.parseInt(order, 10);
+          if (Number.isNaN(sortOrder)) {
+            onError('Введите число');
+            return;
+          }
           void (async () => {
-            const sortOrder = Number.parseInt(order, 10);
             const r = await upsert({
-              code: id.trim(),
+              code: trimmedId,
               title,
               section,
-              sort_order: Number.isFinite(sortOrder) ? sortOrder : 100,
+              sort_order: sortOrder,
               hidden,
             });
             if ('error' in r && r.error) {
@@ -126,6 +142,7 @@ export function CodeSheet({ code, onClose, onDone, onError }: Props) {
                 void (async () => {
                   const r = await remove(code.code);
                   if ('error' in r && r.error) {
+                    setConfirm(false);
                     onError(r.error.message ?? 'Неизвестная ошибка');
                     return;
                   }

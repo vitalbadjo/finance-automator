@@ -4,6 +4,7 @@ import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { makeStore } from '@/app/store';
 import type { Settings } from '@/api/types';
+import { formatDateTime } from '@/shared/format';
 import { SettingsScreen } from './SettingsScreen';
 
 const rpc = vi.fn();
@@ -65,7 +66,7 @@ describe('SettingsScreen', () => {
     expect(screen.queryByRole('combobox', { name: /валюта/i })).not.toBeInTheDocument();
     const card = screen.getByRole('button', { name: /Bybit Crypto Card/ });
     expect(card).toHaveTextContent('записей: 120');
-    expect(card).toHaveTextContent(/синхронизация 20 сентября/);
+    expect(card).toHaveTextContent(`синхронизация ${formatDateTime('2026-09-20T18:42:00+00:00')}`);
     expect(screen.getByRole('button', { name: /Ручной ввод/ })).toHaveTextContent('—');
     expect(screen.getByRole('link', { name: /Категории/ })).toHaveTextContent('1');
     expect(screen.getByRole('link', { name: /Правила по мерчантам/ })).toHaveTextContent('без категории: 1');

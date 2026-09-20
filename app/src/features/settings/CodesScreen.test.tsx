@@ -104,6 +104,44 @@ describe('CodesScreen', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Удалено');
   });
 
+  it('создание с уже существующим кодом не уходит на сервер', async () => {
+    renderScreen();
+    await userEvent.click(await screen.findByRole('button', { name: 'Добавить' }));
+    const dialog = screen.getByRole('dialog', { name: 'Новая категория' });
+    await userEvent.type(within(dialog).getByLabelText('Код'), 'каф');
+    await userEvent.type(within(dialog).getByLabelText('Название'), 'Кафе 2');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Сохранить' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Такой код уже есть');
+    expect(rpc).not.toHaveBeenCalledWith('app_code_upsert', expect.anything());
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('пустой «Порядок» не уходит на сервер', async () => {
+    renderScreen();
+    await userEvent.click(await screen.findByRole('button', { name: /^каф/ }));
+    const dialog = screen.getByRole('dialog', { name: 'каф' });
+    const order = within(dialog).getByLabelText('Порядок');
+    await userEvent.clear(order);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Сохранить' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Введите число');
+    expect(rpc).not.toHaveBeenCalledWith('app_code_upsert', expect.anything());
+  });
+
+  it('ошибка удаления снимает подтверждение', async () => {
+    rpc.mockImplementation((fn: string) => {
+      if (fn === 'app_settings') return Promise.resolve({ data: settings, error: null });
+      if (fn === 'app_code_delete') return Promise.resolve({ data: null, error: { message: 'Категория используется' } });
+      return Promise.resolve({ data: null, error: { message: `нет функции ${fn}` } });
+    });
+    renderScreen();
+    await userEvent.click(await screen.findByRole('button', { name: /^каф/ }));
+    const dialog = screen.getByRole('dialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Удалить' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Точно удалить' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Категория используется');
+    expect(within(dialog).getByRole('button', { name: 'Удалить' })).toBeInTheDocument();
+  });
+
   it('ошибка сервера в тосте, шторка остаётся', async () => {
     rpc.mockImplementation((fn: string) => {
       if (fn === 'app_settings') return Promise.resolve({ data: settings, error: null });

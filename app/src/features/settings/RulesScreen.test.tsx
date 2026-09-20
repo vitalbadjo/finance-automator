@@ -103,6 +103,17 @@ describe('RulesScreen', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Удалено');
   });
 
+  it('пустой «Приоритет» не уходит на сервер', async () => {
+    renderScreen();
+    await userEvent.click(await screen.findByRole('button', { name: /^LIDL/ }));
+    const dialog = screen.getByRole('dialog', { name: 'LIDL' });
+    const prio = within(dialog).getByLabelText('Приоритет');
+    await userEvent.clear(prio);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Сохранить' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Введите число');
+    expect(rpc).not.toHaveBeenCalledWith('app_rule_upsert', expect.anything());
+  });
+
   it('без категории не выбрана — сохранение не уходит на сервер', async () => {
     renderScreen();
     await userEvent.click(await screen.findByRole('button', { name: 'Добавить' }));

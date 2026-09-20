@@ -29,7 +29,13 @@ export function RuleSheet({ rule, codes, onClose, onDone, onError }: Props) {
   const busy = saving || removing;
 
   return (
-    <Sheet open title={existing?.pattern ?? 'Новое правило'} onClose={onClose}>
+    <Sheet
+      open
+      title={existing?.pattern ?? 'Новое правило'}
+      onClose={() => {
+        if (!busy) onClose();
+      }}
+    >
       <form
         className={styles.form}
         onSubmit={(e) => {
@@ -38,13 +44,17 @@ export function RuleSheet({ rule, codes, onClose, onDone, onError }: Props) {
             onError('Выберите категорию');
             return;
           }
+          const prio = Number.parseInt(priority, 10);
+          if (Number.isNaN(prio)) {
+            onError('Введите число');
+            return;
+          }
           void (async () => {
-            const prio = Number.parseInt(priority, 10);
             const r = await upsert({
               id: rule.id,
               pattern,
               code,
-              priority: Number.isFinite(prio) ? prio : 100,
+              priority: prio,
               note: note.trim() === '' ? null : note.trim(),
             });
             if ('error' in r && r.error) {
@@ -121,6 +131,7 @@ export function RuleSheet({ rule, codes, onClose, onDone, onError }: Props) {
                 void (async () => {
                   const r = await remove(existing.id);
                   if ('error' in r && r.error) {
+                    setConfirm(false);
                     onError(r.error.message ?? 'Неизвестная ошибка');
                     return;
                   }

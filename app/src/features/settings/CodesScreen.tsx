@@ -69,10 +69,11 @@ export function CodesScreen() {
           </Button>
         </>
       )}
-      {editing.kind !== 'closed' && (
+      {editing.kind !== 'closed' && data && (
         <CodeSheet
           key={editing.kind === 'edit' ? editing.code.code : 'new'}
           code={editing.kind === 'edit' ? editing.code : null}
+          existingCodes={data.codes.map((c) => c.code)}
           onClose={close}
           onDone={(m) => {
             close();

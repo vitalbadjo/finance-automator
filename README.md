@@ -237,7 +237,7 @@ while offline or between refreshes.
 **Settings.** The «Ещё» tab (`/settings`) opens a settings screen where theme
 (system, light, dark) is stored on the device only. Base currency is displayed
 read-only. Sources list transaction count and last sync for each, with title
-editable. `/settings/codes` edits category codes (add, rename, reorder, hide
+editable. `/settings/codes` edits categories (add, edit title, reorder, hide
 from the entry screen, delete if unused). `/settings/rules` edits merchant
 rules and shows unmapped merchants from `v_unmapped` so rules can be created
 from them. All writes go through `app_source_rename`, `app_code_upsert`,
