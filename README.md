@@ -94,6 +94,7 @@ db/010_small_fixes.sql
 db/011_ping.sql
 db/012_app.sql
 db/013_app_edit.sql
+db/014_rules_gog.sql
 ```
 
 Skip `004`: it is a check, not a migration. `001` uses bare `create table`
