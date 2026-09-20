@@ -1,0 +1,14 @@
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-6);
+  transform: translateX(-50%);
+  max-width: calc(100% - 2 * var(--space-4));
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 14px;
+  z-index: 10;
+}
+.err { background: var(--err); color: #fff; }

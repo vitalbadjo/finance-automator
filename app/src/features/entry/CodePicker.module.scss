@@ -1,0 +1,20 @@
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.chip {
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  font-size: 14px;
+}
+.active {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+.more {
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  font-size: 14px;
+}

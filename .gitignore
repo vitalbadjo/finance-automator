@@ -7,3 +7,8 @@ supabase/.branches/
 .idea/
 # personal financial notes, kept out of the repo
 docs/HANDOFF.md
+
+app/node_modules/
+app/dist/
+app/dev-dist/
+app/.env*.local

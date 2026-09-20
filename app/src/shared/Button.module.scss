@@ -1,0 +1,14 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+  &:disabled { opacity: 0.5; cursor: default; }
+}
+.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); width: 100%; }
+.ghost { background: transparent; }
