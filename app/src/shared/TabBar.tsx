@@ -5,6 +5,7 @@ const TABS = [
   { to: '/', label: 'Ввод' },
   { to: '/month', label: 'Месяц' },
   { to: '/stats', label: 'Статистика' },
+  { to: '/settings', label: 'Ещё' },
 ];
 
 export function TabBar() {
@@ -14,7 +15,7 @@ export function TabBar() {
         <NavLink
           key={t.to}
           to={t.to}
-          end
+          end={t.to === '/'}
           className={({ isActive }) => [styles.item, isActive ? styles.active : ''].join(' ')}
         >
           {t.label}

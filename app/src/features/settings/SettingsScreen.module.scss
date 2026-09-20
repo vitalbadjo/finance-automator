@@ -1,0 +1,30 @@
+.wrap { max-width: 480px; margin: 0 auto; padding: var(--space-4) var(--space-4) 72px; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+.withBar { padding-bottom: 112px; }
+.header { display: flex; align-items: center; gap: var(--space-3); }
+.title { font-size: 20px; font-weight: 600; margin: 0; }
+.back { color: var(--muted); text-decoration: none; font-size: 14px; }
+.section { display: grid; gap: var(--space-2); }
+.h2 { font-size: 13px; color: var(--muted); font-weight: 400; margin: 0; text-transform: uppercase; letter-spacing: 0.04em; }
+.row { display: flex; gap: var(--space-1); flex-wrap: wrap; }
+.chip { min-height: 40px; padding: 0 var(--space-3); font-size: 14px; }
+.chipOn { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.muted { color: var(--muted); font-size: 14px; margin: 0; }
+.value { font-size: 20px; font-weight: 600; margin: 0; }
+.link { display: flex; justify-content: space-between; align-items: center; min-height: 48px; padding: var(--space-2) 0; border-bottom: 1px solid var(--line); color: var(--fg); text-decoration: none; }
+.list { display: grid; }
+.item {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: center;
+  width: 100%; text-align: left; padding: var(--space-2) 0; border: 0; border-bottom: 1px solid var(--line);
+  background: none; cursor: pointer; min-width: 0; color: inherit;
+}
+.itemMain { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.itemSub { display: block; color: var(--muted); font-size: 12px; }
+.itemRight { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 14px; }
+.hidden { opacity: 0.5; }
+.form { display: grid; gap: var(--space-3); }
+.actions { display: grid; gap: var(--space-2); }
+.select {
+  min-height: 48px; padding: 0 var(--space-3); border: 1px solid var(--line); border-radius: var(--radius);
+  background: transparent; width: 100%; font: inherit; color: inherit;
+}
+.check { display: flex; align-items: center; gap: var(--space-2); min-height: 48px; }
