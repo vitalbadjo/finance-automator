@@ -1,21 +1,21 @@
-.wrap { max-width: 480px; margin: 0 auto; padding: var(--space-4) var(--space-4) 72px; display: grid; gap: var(--space-4); }
+.wrap { max-width: 480px; margin: 0 auto; padding: var(--space-4) var(--space-4) 72px; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
 .header { display: flex; align-items: center; justify-content: space-between; }
 .month { font-size: 18px; font-weight: 600; margin: 0; }
 .total { font-size: 28px; font-weight: 600; margin: 0; }
-.chips { display: flex; gap: var(--space-1); overflow-x: auto; padding-bottom: var(--space-1); }
+.chips { display: flex; gap: var(--space-1); overflow-x: auto; padding-bottom: var(--space-1); min-width: 0; }
 .chip { min-height: 40px; padding: 0 var(--space-3); font-size: 14px; white-space: nowrap; }
 .chipOn { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
 .muted { color: var(--muted); font-size: 14px; margin: 0; }
-.sources { display: flex; gap: var(--space-1); }
+.sources { display: flex; gap: var(--space-1); flex-wrap: wrap; }
 .day { display: grid; gap: var(--space-1); }
 .dayTitle { font-size: 13px; color: var(--muted); margin: var(--space-3) 0 0; }
 .row {
   display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-2); align-items: baseline;
   width: 100%; text-align: left; padding: var(--space-2) 0; border: 0; background: none; cursor: pointer;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line); min-width: 0;
 }
 .code { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 40px; }
-.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .tag { color: var(--muted); font-size: 12px; margin-left: var(--space-1); }
 .sum { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .base { display: block; color: var(--muted); font-size: 12px; }

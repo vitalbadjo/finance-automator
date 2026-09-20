@@ -16,7 +16,9 @@ export function DayList({ days, baseCurrency, onRowClick }: Props) {
     <section aria-label="Транзакции">
       {days.map((d) => (
         <div key={d.date} className={styles.day}>
-          <p className={styles.dayTitle}>{formatDayTitle(d.date)} · {formatMoney(d.subtotal, baseCurrency)}</p>
+          <p className={styles.dayTitle}>
+            {d.subtotal === 0 ? formatDayTitle(d.date) : `${formatDayTitle(d.date)} · ${formatMoney(d.subtotal, baseCurrency)}`}
+          </p>
           {d.rows.map((t) => (
             <TxnRow key={`${t.source}:${t.external_id}`} txn={t} onClick={onRowClick} />
           ))}
