@@ -50,3 +50,10 @@ export interface SetCodeArgs {
 export interface AppError {
   message: string;
 }
+
+export interface MonthlyStat {
+  month: string;
+  code: string;
+  amount: number;
+  txn_count: number;
+}

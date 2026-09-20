@@ -4,6 +4,7 @@ import styles from './TabBar.module.scss';
 const TABS = [
   { to: '/', label: 'Ввод' },
   { to: '/month', label: 'Месяц' },
+  { to: '/stats', label: 'Статистика' },
 ];
 
 export function TabBar() {
