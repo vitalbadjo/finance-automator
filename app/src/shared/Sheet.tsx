@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from './Button';
@@ -17,14 +17,24 @@ const stack: symbol[] = [];
 // Нижний лист без сторонних библиотек: рендерим через portal в body, блокируем
 // прокрутку страницы, пока лист открыт, закрываем по Escape и клику по фону.
 export function Sheet({ open, title, onClose, children }: Props) {
+  // Стабильный id инстанса: создаётся один раз (ленивая инициализация
+  // useState) и не зависит от смены onClose при ре-рендерах.
+  const [id] = useState(() => Symbol('sheet'));
+
+  // Актуальный onClose храним в ref, чтобы эффект стека не перезапускался
+  // при смене немемоизированного колбэка у вызывающей стороны.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) return;
-    const id = Symbol('sheet');
     stack.push(id);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && stack[stack.length - 1] === id) onClose();
+      if (e.key === 'Escape' && stack[stack.length - 1] === id) onCloseRef.current();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => {
@@ -33,7 +43,7 @@ export function Sheet({ open, title, onClose, children }: Props) {
       document.body.style.overflow = prevOverflow;
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [open, onClose]);
+  }, [open, id]);
 
   if (!open) return null;
 
