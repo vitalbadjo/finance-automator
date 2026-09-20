@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAddTxnMutation, useGetCodesQuery, useGetMonthTxnsQuery } from '@/api/api';
 import { supabase } from '@/api/supabase';
 import { Button } from '@/shared/Button';
+import { TabBar } from '@/shared/TabBar';
 import { Toast } from '@/shared/Toast';
 import { EntryForm } from './EntryForm';
 import { TodayList } from './TodayList';
@@ -85,6 +86,7 @@ export function EntryScreen() {
 
       <TodayList />
       <Toast message={toast?.message ?? null} kind={toast?.kind ?? 'ok'} />
+      <TabBar />
     </main>
   );
 }

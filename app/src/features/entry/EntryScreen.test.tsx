@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
+import { MemoryRouter } from 'react-router';
 import { makeStore } from '@/app/store';
 import { EntryScreen } from './EntryScreen';
 
@@ -20,7 +21,9 @@ const codes = [
 const renderScreen = () =>
   render(
     <Provider store={makeStore()}>
-      <EntryScreen />
+      <MemoryRouter>
+        <EntryScreen />
+      </MemoryRouter>
     </Provider>,
   );
 

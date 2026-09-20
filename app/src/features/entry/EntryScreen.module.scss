@@ -1,4 +1,4 @@
-.wrap { max-width: 480px; margin: 0 auto; padding: var(--space-4); display: grid; gap: var(--space-4); }
+.wrap { max-width: 480px; margin: 0 auto; padding: var(--space-4); padding-bottom: 72px; display: grid; gap: var(--space-4); }
 .header { display: flex; justify-content: space-between; align-items: center; }
 .title { font-size: 18px; font-weight: 600; margin: 0; }
 .muted { color: var(--muted); font-size: 14px; }
