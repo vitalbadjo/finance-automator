@@ -6,7 +6,10 @@ import { store } from '@/app/store';
 import { router } from '@/app/router';
 import { useSessionListener } from '@/features/auth/useSession';
 import { useOffline } from '@/offline/useOffline';
+import { applyTheme, readTheme } from '@/shared/theme';
 import '@/styles/globals.scss';
+
+applyTheme(readTheme());
 
 function App() {
   useSessionListener();

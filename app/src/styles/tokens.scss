@@ -1,3 +1,17 @@
+// Тёмный набор один: включается системной темой, если пользователь не
+// выбрал светлую, и принудительно по data-theme="dark" (см. shared/theme.ts).
+@mixin dark {
+  --bg: #161616;
+  --fg: #ececec;
+  --muted: #9a9a9a;
+  --line: #333333;
+  --surface: #222222;
+  --accent: #ececec;
+  --accent-fg: #161616;
+  --ok: #6cc48d;
+  --err: #f2857c;
+}
+
 :root {
   color-scheme: light dark;
   --bg: #ffffff;
@@ -19,15 +33,16 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #161616;
-    --fg: #ececec;
-    --muted: #9a9a9a;
-    --line: #333333;
-    --surface: #222222;
-    --accent: #ececec;
-    --accent-fg: #161616;
-    --ok: #6cc48d;
-    --err: #f2857c;
+  :root:not([data-theme='light']) {
+    @include dark;
   }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  @include dark;
 }
