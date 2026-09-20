@@ -44,3 +44,11 @@ export const formatDayTitle = (iso: string): string => {
   const [, m, d] = iso.split('-');
   return `${String(Number(d))} ${MONTHS_GEN[Number(m) - 1] ?? m ?? ''}`;
 };
+
+const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+// «сен» из YYYY-MM или YYYY-MM-DD
+export const formatMonthShort = (ym: string): string => {
+  const m = ym.split('-')[1];
+  return MONTHS_SHORT[Number(m) - 1] ?? m ?? '';
+};

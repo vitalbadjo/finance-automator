@@ -3,7 +3,7 @@ import type { BaseQueryFn } from '@reduxjs/toolkit/query';
 import type { PostgrestSingleResponse } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { toAppError } from './errors';
-import type { AddTxnArgs, AppError, CodeRef, MonthRange, MonthTxn, SetCodeArgs, UpdateTxnArgs } from './types';
+import type { AddTxnArgs, AppError, CodeRef, MonthlyStat, MonthRange, MonthTxn, SetCodeArgs, UpdateTxnArgs } from './types';
 
 interface RpcCall {
   fn: string;
@@ -41,6 +41,10 @@ export const api = createApi({
       query: ({ from, to }) => ({ fn: 'app_month_txns', args: { p_from: from, p_to: to } }),
       providesTags: ['Txns'],
     }),
+    getMonthlyStats: build.query<MonthlyStat[], MonthRange>({
+      query: ({ from, to }) => ({ fn: 'app_monthly_stats', args: { p_from: from, p_to: to } }),
+      providesTags: ['Txns'],
+    }),
     addTxn: build.mutation<string, AddTxnArgs>({
       query: ({ date, amount, currency, code, note }) => ({
         fn: 'app_add_txn',
@@ -69,4 +73,4 @@ export const api = createApi({
   }),
 });
 
-export const { useGetCodesQuery, useGetMonthTxnsQuery, useAddTxnMutation, useUpdateTxnMutation, useDeleteTxnMutation, useSetCodeMutation } = api;
+export const { useGetCodesQuery, useGetMonthTxnsQuery, useGetMonthlyStatsQuery, useAddTxnMutation, useUpdateTxnMutation, useDeleteTxnMutation, useSetCodeMutation } = api;
