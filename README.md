@@ -37,13 +37,16 @@ spent-authomator/
 │   ├── 010_small_fixes.sql     manual-entry timezone, rule pattern guard, card-only fees view
 │   ├── 011_ping.sql            public.ping() for the keepalive workflow
 │   ├── 012_app.sql             app RPC functions: codes, add txn, month txns
-│   └── 013_app_edit.sql        app edit RPCs: update/delete manual, set category override
+│   ├── 013_app_edit.sql        app edit RPCs: update/delete manual, set category override
+│   ├── 014_rules_gog.sql        merchant rules for Google & GoG
+│   └── 015_app_stats.sql        monthly stats RPC for the app
 ├── app/                         PWA for manual entry (Vite + React + TypeScript)
 │   ├── src/api/                 supabase client, RTK Query API, error mapping, types
 │   ├── src/features/
 │   │   ├── auth/                login screen, session hook, RequireAuth guard
 │   │   ├── entry/                amount/date/code entry form, today's list, reducer
-│   │   └── month/                month screen: summary, day list, edit sheets
+│   │   ├── month/                month screen: summary, day list, edit sheets
+│   │   └── stats/                stats screen: monthly bars, breakdown, trend, forecast
 │   ├── src/shared/               Button, Field, Toast, formatting helpers
 │   └── src/styles/               SCSS tokens and global styles
 ├── supabase/
@@ -95,6 +98,7 @@ db/011_ping.sql
 db/012_app.sql
 db/013_app_edit.sql
 db/014_rules_gog.sql
+db/015_app_stats.sql
 ```
 
 Skip `004`: it is a check, not a migration. `001` uses bare `create table`
@@ -213,6 +217,8 @@ modules. It talks to the database only through `public.app_*` functions
 `/month` shows the month total, per-category sums and a day-grouped list; manual
 entries can be edited and deleted there, and any row's category can be overridden
 (`code_override`), which survives syncs.
+
+`/stats` shows monthly totals, the selected month's category breakdown with shares, a per-category trend and an end-of-month forecast (`app_monthly_stats`).
 
 ```bash
 cd app
