@@ -4,11 +4,8 @@ import type { PostgrestSingleResponse } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { toAppError } from './errors';
 import type { AddTxnWithId, AppError, CodeRef, MonthlyStat, MonthRange, MonthTxn, SetCodeArgs, UpdateTxnArgs } from './types';
-
-interface RpcCall {
-  fn: string;
-  args?: Record<string, unknown>;
-}
+import { withCache, type RpcCall } from '@/offline/cache';
+import { cacheStorage } from '@/offline/db';
 
 // Один baseQuery на все функции: supabase.rpc сам подставляет JWT сессии,
 // поэтому в базе запрос идёт от роли authenticated.
@@ -29,7 +26,7 @@ const rpcBaseQuery: BaseQueryFn<RpcCall, unknown, AppError> = async ({ fn, args 
 
 export const api = createApi({
   reducerPath: 'api',
-  baseQuery: rpcBaseQuery,
+  baseQuery: withCache(rpcBaseQuery, cacheStorage),
   tagTypes: ['Codes', 'Txns'],
   endpoints: (build) => ({
     // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- стандартная сигнатура RTK Query для запроса без аргументов
