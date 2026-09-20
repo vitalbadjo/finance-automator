@@ -219,11 +219,15 @@ npm run build                  # dist/
 user; Authentication → Sign In / Providers → Email → disable sign-ups;
 Authentication → URL Configuration → add the app URL to Redirect URLs.
 
-**Cloudflare Pages**: Workers & Pages → Create → Pages → connect the GitHub
-repo. Root directory `app`, build command `npm run build`, output `dist`.
-Environment variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-(the publishable key). `public/_redirects` handles SPA routing. Every push
-to `main` deploys.
+**Cloudflare Workers** (static assets): Workers & Pages → Create →
+connect the GitHub repo. Root directory `app`, build command
+`npm run build`, deploy command `npx wrangler deploy`. `app/wrangler.jsonc`
+names the worker (`spend`), points assets at `dist` and enables SPA
+routing via `not_found_handling`; there is deliberately no `_redirects`
+file, Workers rejects the catch-all rule as a loop. Environment variables
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (the publishable key) are
+build-time, set them under Build → Variables and secrets. Every push to
+`main` deploys.
 
 ## The LFS-2026 spreadsheet
 
