@@ -12,6 +12,9 @@
 set search_path = public;
 
 drop function if exists public.app_add_txn(date, numeric, text, text, text);
+-- И свою собственную версию: файл должен переприменяться без ошибки
+-- «функция уже существует» и без второй перегрузки.
+drop function if exists public.app_add_txn(date, numeric, text, text, text, text);
 
 create function public.app_add_txn(
   p_date date, p_amount numeric, p_currency text, p_code text,

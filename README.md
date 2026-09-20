@@ -105,7 +105,9 @@ db/016_app_add_txn_id.sql
 ```
 
 Skip `004`: it is a check, not a migration. `001` uses bare `create table`
-and fails on a schema that already exists.
+and fails on a schema that already exists. Migrations are applied once, in
+order: re-running `012` after `016` would bring back the five-argument
+`app_add_txn` alongside the six-argument one and make the call ambiguous.
 
 **2. Ingest function.**
 

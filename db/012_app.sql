@@ -6,8 +6,8 @@
 --
 -- app_add_txn нарочно без on conflict и с uuid вместо составного ключа:
 -- у spend_add_manual два кофе в один день без заметки перезаписали бы
--- друг друга, для приложения это неприемлемо. spend_add_manual остаётся
--- для SQL Editor.
+-- друг друга, для приложения это неприемлемо (с 016 — с on conflict do
+-- nothing, см. 016). spend_add_manual остаётся для SQL Editor.
 
 set search_path = public;
 
