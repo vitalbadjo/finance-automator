@@ -5,12 +5,14 @@ import { Button } from '@/shared/Button';
 import { Field } from '@/shared/Field';
 import { Toast } from '@/shared/Toast';
 import { AmountField } from './AmountField';
-import { CodeGrid } from './CodeGrid';
+import { CodePicker } from './CodePicker';
 import { CurrencyToggle } from './CurrencyToggle';
 import { DatePicker } from './DatePicker';
 import { TodayList } from './TodayList';
 import { entryReducer, initialEntry } from './entryReducer';
+import { frequentCodes } from './frequentCodes';
 import { pushRecentCurrency, readRecentCurrencies } from './recentCurrencies';
+import { pushRecentCode, readRecentCodes } from './recentCodes';
 import { monthRange, todayISO } from './dates';
 import styles from './EntryScreen.module.scss';
 
@@ -21,6 +23,7 @@ interface ToastState {
 
 export function EntryScreen() {
   const [currencies, setCurrencies] = useState(readRecentCurrencies);
+  const [recentCodes, setRecentCodes] = useState(readRecentCodes);
   const [state, dispatch] = useReducer(entryReducer, initialEntry(currencies[0] ?? 'USD', todayISO()));
   const [toast, setToast] = useState<ToastState | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -37,6 +40,7 @@ export function EntryScreen() {
 
   const amount = Number(state.amount);
   const canSave = !saving && state.code !== null && Number.isFinite(amount) && amount > 0;
+  const frequent = frequentCodes(month.data ?? [], recentCodes, codes.data ?? []);
 
   const show = (message: string, kind: 'ok' | 'err') => {
     if (timer.current) clearTimeout(timer.current);
@@ -68,6 +72,7 @@ export function EntryScreen() {
         return;
       }
       setCurrencies(pushRecentCurrency(state.currency));
+      setRecentCodes(pushRecentCode(state.code));
       dispatch({ type: 'saved' });
       show('Записано', 'ok');
     } finally {
@@ -111,12 +116,13 @@ export function EntryScreen() {
       {codes.isLoading && <p className={styles.muted}>Загружаем категории…</p>}
       {codes.error && <p className={styles.muted}>Категории не загрузились: {codes.error.message}</p>}
       {codes.data && (
-        <CodeGrid
+        <CodePicker
           codes={codes.data}
           value={state.code}
           onChange={(v) => {
             dispatch({ type: 'code', value: v });
           }}
+          frequent={frequent}
         />
       )}
 

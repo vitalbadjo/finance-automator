@@ -18,7 +18,10 @@ export function TodayList() {
       {!isLoading && !error && rows.length === 0 && <p className={styles.empty}>Пока ничего</p>}
       {rows.map((t) => (
         <div key={`${t.source}:${t.external_id}`} className={styles.item}>
-          <span className={styles.time}>{formatTime(t.txn_at)}</span>
+          {/* вручную добавленные строки хранятся с временем полуночи по Белграду —
+              оно всегда показывало бы 00:00, поэтому для них время скрываем,
+              оставляя пустую ячейку для выравнивания сетки */}
+          <span className={styles.time}>{t.source === 'manual' ? '' : formatTime(t.txn_at)}</span>
           <span className={styles.name}>
             {t.note ?? t.merchant_name ?? '—'}
             <span className={styles.code}>
