@@ -1,10 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { api } from '@/api/api';
 import { authReducer } from '@/features/auth/authSlice';
+import { offlineReducer } from '@/offline/state';
 
 export const makeStore = () =>
   configureStore({
-    reducer: { [api.reducerPath]: api.reducer, auth: authReducer },
+    reducer: { [api.reducerPath]: api.reducer, auth: authReducer, offline: offlineReducer },
     middleware: (getDefault) => getDefault().concat(api.middleware),
   });
 
