@@ -1,3 +1,4 @@
+import { api } from '@/api/api';
 import { makeStore } from '@/app/store';
 import { enqueueTxn, flushQueue, newId, removeTxn, retryTxn, uuidFromRandomValues } from './thunks';
 import { pendingSet } from './state';
@@ -175,6 +176,56 @@ describe('flushQueue', () => {
 
     expect(store.getState().offline.pending).toHaveLength(0);
     expect(stored.has('1')).toBe(false);
+  });
+});
+
+describe('обновление списков после отправки очереди', () => {
+  const range = { from: '2026-09-01', to: '2026-09-30' };
+
+  it('месяц перезапрашивается, даже если стартовые запросы ещё в полёте', async () => {
+    const month = deferred<{ data: unknown[]; error: null; status: number }>();
+    const codes = deferred<{ data: unknown[]; error: null; status: number }>();
+    let monthCalls = 0;
+    let codesCalls = 0;
+    rpc.mockImplementation((...a: unknown[]): Promise<unknown> => {
+      if (a[0] === 'app_month_txns') {
+        monthCalls += 1;
+        return monthCalls === 1 ? month.promise : Promise.resolve({ data: [], error: null, status: 200 });
+      }
+      if (a[0] === 'app_codes') {
+        codesCalls += 1;
+        return codesCalls === 1 ? codes.promise : Promise.resolve({ data: [], error: null, status: 200 });
+      }
+      return Promise.resolve({ data: 'uuid', error: null, status: 200 });
+    });
+
+    const store = makeStore();
+    // Старт приложения: месяц и справочник запрошены и ещё не ответили.
+    // Подписок на месяц две (EntryScreen и TodayList), и StrictMode
+    // прогоняет эффекты дважды — повторные initiate отбрасываются
+    // условием queryThunk, пока первый запрос в полёте.
+    const subs = [
+      store.dispatch(api.endpoints.getMonthTxns.initiate(range)),
+      store.dispatch(api.endpoints.getCodes.initiate()),
+      store.dispatch(api.endpoints.getMonthTxns.initiate(range)),
+      store.dispatch(api.endpoints.getCodes.initiate()),
+    ];
+
+    store.dispatch(pendingSet([queued('1')]));
+    const flush = store.dispatch(flushQueue());
+    // Мутация успевает уйти и вернуться раньше, чем ответят списки.
+    await new Promise<void>((r) => {
+      setTimeout(r, 0);
+    });
+    month.resolve({ data: [], error: null, status: 200 });
+    codes.resolve({ data: [], error: null, status: 200 });
+    await flush;
+    await Promise.all(subs);
+    await Promise.all(store.dispatch(api.util.getRunningQueriesThunk()));
+
+    // Первый запрос месяца сделан до отправки, второй — после неё.
+    expect(monthCalls).toBe(2);
+    for (const s of subs) s.unsubscribe();
   });
 });
 

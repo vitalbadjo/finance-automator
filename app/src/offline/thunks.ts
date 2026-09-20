@@ -60,8 +60,8 @@ export const loadQueue = createAsyncThunk('offline/load', async (_: void, { disp
 export const flushQueue = createAsyncThunk('offline/flush', async (_: void, { dispatch, getState }) => {
   if (flushing) return;
   flushing = true;
+  let sentAny = false;
   try {
-    let sentAny = false;
     for (;;) {
       const item = nextToSend((getState() as OfflineRootState).offline.pending);
       if (!item) break;
@@ -103,10 +103,19 @@ export const flushQueue = createAsyncThunk('offline/flush', async (_: void, { di
       }
       if (outcome.kind === 'network') break;
     }
-    if (sentAny) dispatch(api.util.invalidateTags(['Txns']));
   } finally {
     flushing = false;
   }
+  if (!sentAny) return;
+
+  // Инвалидация откладывается, пока есть запросы в полёте
+  // (invalidationBehavior: 'delayed'), а перезапрос запроса, который ещё не
+  // ответил, RTK Query отбрасывает условием queryThunk — отложенная метка
+  // при этом уже потрачена, и списка обновления не будет. На старте месяц и
+  // справочник как раз в полёте, поэтому сначала дожидаемся их, а потом
+  // инвалидируем: к этому моменту перезапрашивать уже есть что.
+  await Promise.all(dispatch(api.util.getRunningQueriesThunk()));
+  dispatch(api.util.invalidateTags(['Txns']));
 });
 
 export const enqueueTxn = createAsyncThunk('offline/enqueue', async (args: AddTxnArgs, { dispatch }) => {
