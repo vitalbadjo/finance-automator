@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router';
@@ -106,14 +106,36 @@ describe('StatsScreen', () => {
 
   it('‹ показывает прошлый год, › заблокирована в текущем', async () => {
     const user = userEvent.setup();
+    let resolvePrev: (v: { data: MonthlyStat[]; error: null }) => void = () => {
+      // переопределяется ниже, до использования
+    };
+    const prevPromise = new Promise<{ data: MonthlyStat[]; error: null }>((resolve) => {
+      resolvePrev = resolve;
+    });
+    rpc.mockImplementation((fn: string, args?: { p_from?: string }) => {
+      if (fn === 'app_codes') return Promise.resolve({ data: codes, error: null });
+      if (fn === 'app_monthly_stats') {
+        const from = args?.p_from ?? '';
+        if (from.startsWith(String(currentYear))) return Promise.resolve({ data: stats, error: null });
+        if (from.startsWith(String(currentYear - 1))) return prevPromise;
+        return Promise.resolve({ data: [], error: null });
+      }
+      return Promise.resolve({ data: null, error: { message: `нет функции ${fn}` } });
+    });
     renderScreen();
     await screen.findByRole('heading', { level: 2 });
     expect(screen.getByRole('button', { name: 'Следующий год' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Предыдущий год' }));
+
+    // Пока предыдущий год ещё грузится: заголовок года сменился, но
+    // старый итог не должен мелькать — только «Загружаем…».
     expect(await screen.findByText(String(currentYear - 1))).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/1\s?500,00/);
-    });
+    expect(screen.getByText('Загружаем…')).toBeInTheDocument();
+    expect(screen.queryByText(/500,00/)).not.toBeInTheDocument();
+
+    resolvePrev({ data: prevYearStats, error: null });
+
+    expect(await screen.findByRole('heading', { level: 2 })).toHaveTextContent(/1\s?500,00/);
     expect(screen.getByText(`Март ${String(currentYear - 1)}`)).toBeInTheDocument();
     expect(screen.queryByText(/к концу месяца около/)).not.toBeInTheDocument();
   });

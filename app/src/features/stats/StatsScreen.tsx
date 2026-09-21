@@ -23,7 +23,7 @@ export function StatsScreen() {
   const currentMonth = today.slice(0, 7);
   const currentYear = Number(today.slice(0, 4));
   const [year, setYear] = useState(() => Number(today.slice(0, 4)));
-  const { data, isLoading, error } = useGetMonthlyStatsQuery(yearRange(year));
+  const { data, isLoading, isFetching, error } = useGetMonthlyStatsQuery(yearRange(year));
   const codes = useGetCodesQuery();
   const [selected, setSelected] = useState<string | null>(null);
   const [trendCode, setTrendCode] = useState<string | null>(null);
@@ -68,8 +68,9 @@ export function StatsScreen() {
           </Button>
         </div>
       )}
-      {data && totals.length === 0 && <p className={styles.muted}>Пока нет данных за {String(year)}</p>}
-      {data && totals.length > 0 && trendCode === null && (
+      {!isLoading && !error && isFetching && <p className={styles.muted}>Загружаем…</p>}
+      {!isFetching && data && totals.length === 0 && <p className={styles.muted}>Пока нет данных за {String(year)}</p>}
+      {!isFetching && data && totals.length > 0 && trendCode === null && (
         <>
           <div>
             <h2 className={styles.total}>{fmt(total)}</h2>
@@ -85,7 +86,7 @@ export function StatsScreen() {
           <Breakdown rows={monthBreakdown(rows, month)} titles={titles} baseCurrency={BASE_CURRENCY} onSelect={setTrendCode} />
         </>
       )}
-      {data && trendCode !== null && (
+      {!isFetching && data && trendCode !== null && (
         <>
           <div className={styles.trendHead}>
             <h2 className={styles.title}>{trendCode} по месяцам</h2>
