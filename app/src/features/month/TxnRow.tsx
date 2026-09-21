@@ -11,7 +11,7 @@ const SOURCE_LABEL: Record<string, string> = { bybit_card: 'карта', manual:
 
 export function TxnRow({ txn, onClick }: Props) {
   const tag = [
-    txn.kind === 'transfer' ? 'наличные' : (SOURCE_LABEL[txn.source] ?? txn.source),
+    txn.kind === 'transfer' ? (txn.source === 'sheet' ? 'перевод' : 'наличные') : (SOURCE_LABEL[txn.source] ?? txn.source),
     ...(txn.status === 'in_progress' ? ['в обработке'] : []),
     ...(txn.pending ? ['не отправлено'] : []),
   ].join(' · ');

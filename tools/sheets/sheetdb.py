@@ -3,6 +3,10 @@
 query(sql) -> list[dict]: пишет sql во временный файл, запускает
 `supabase db query --linked -f <file>` из корня репозитория и разбирает
 JSON после служебной строки CLI. Ошибка базы приходит как {"_tag":"Error"}.
+
+one(sql) -> dict: то же самое, но требует ровно одну строку в ответе —
+удобно там, где пустой ответ CLI (например, из-за обрыва соединения)
+раньше молча читался бы как отсутствие результата.
 """
 import json
 import os
@@ -23,7 +27,7 @@ def query(sql: str) -> list:
     try:
         res = subprocess.run(
             ['supabase', 'db', 'query', '--linked', '-f', path],
-            cwd=REPO_ROOT, capture_output=True, text=True,
+            cwd=REPO_ROOT, capture_output=True, text=True, encoding='utf-8',
         )
     finally:
         os.unlink(path)
@@ -37,6 +41,16 @@ def query(sql: str) -> list:
     if data.get('_tag') == 'Error':
         raise DbError(data.get('error', {}).get('message', str(data)))
     return data.get('rows', [])
+
+
+def one(sql: str) -> dict:
+    """Первая (и единственная ожидаемая) строка ответа. Пустой ответ CLI —
+    например, из-за обрыва соединения на полпути — не должен тихо читаться
+    как «ничего не изменилось»: это DbError."""
+    rows = query(sql)
+    if not rows:
+        raise DbError('пустой ответ CLI: ' + sql[:80])
+    return rows[0]
 
 
 def sql_literal(value) -> str:

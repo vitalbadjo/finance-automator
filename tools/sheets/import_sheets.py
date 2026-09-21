@@ -180,7 +180,7 @@ def write(rows: list) -> int:
     for i in range(0, len(rows), BATCH):
         chunk = rows[i:i + BATCH]
         sql = f'select public.spend_import_sheet_rows({sheetdb.sql_literal(json.dumps(chunk, ensure_ascii=False))}::jsonb) as n'
-        n = sheetdb.query(sql)[0]['n']
+        n = sheetdb.one(sql)['n']
         total += n
         print(f'  пачка {i // BATCH + 1}: {n} строк')
     return total

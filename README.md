@@ -106,6 +106,7 @@ db/015_app_stats.sql
 db/016_app_add_txn_id.sql
 db/017_app_settings.sql
 db/018_sheet_import.sql
+db/019_fx_source_rank.sql
 ```
 
 Skip `004`: it is a check, not a migration. `001` uses bare `create table`
@@ -261,6 +262,18 @@ synthesized per (year, month, row) so re-running the same file updates
 existing rows instead of duplicating them. Rows the spreadsheet marks as a
 transfer or savings move land with `message_type = '2'`, which makes them
 `kind = 'transfer'` in `v_txn` and keeps them out of the expense totals.
+
+**Idempotency caveat.** The `NNN` in `sheet-YYYY-MM-NNN` is the row's ordinal
+inside that month's block, not a stable id from the spreadsheet. Deleting or
+inserting a row upstream shifts the ordinals of every later row in that
+month on the next import, and the old tail row is left behind as an orphan
+rather than overwritten. Clear the month before re-importing it:
+`delete from spend.raw_txn where source='sheet' and external_id like 'sheet-YYYY-MM-%'`,
+then re-run the import for that file.
+
+Imported rows use the hidden categories added by `db/018_sheet_import.sql`
+(they exist only in old sheet data). The stats breakdown shows them by their
+bare code until they are unhidden in Settings.
 
 ```bash
 cd app

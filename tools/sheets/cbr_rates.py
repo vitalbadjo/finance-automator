@@ -50,6 +50,9 @@ def write(rates: list) -> int:
     n = 0
     for i in range(0, len(rates), BATCH):
         chunk = rates[i:i + BATCH]
+        # Значения — только date.isoformat(), фиксированный ключ 'cbr' и
+        # отформатированное число: ни одна внешняя строка сюда не попадает.
+        # Всё, что могло бы прийти извне, должно идти через sheetdb.sql_literal.
         values = ',\n'.join(f"('{d.isoformat()}', '{c}', {r:.8f}, 'cbr')" for d, c, r in chunk)
         sheetdb.query(
             'insert into spend.fx_rate (rate_date, currency, rate, source) values\n' + values +

@@ -88,6 +88,7 @@ describe('MonthScreen', () => {
           data: [
             ...fixtures,
             row({ external_id: 'sheet-1', source: 'sheet', merchant_name: 'Импорт', code: 'прод', kind: 'expense', base_amount: 1, amount: 1, txn_date: '2026-09-10', txn_at: '2026-09-10T10:00:00+00:00' }),
+            row({ external_id: 'sheet-2', source: 'sheet', merchant_name: 'Инвестиции', code: null, kind: 'transfer', base_amount: 50, amount: 50, txn_date: '2026-09-05', txn_at: '2026-09-05T10:00:00+00:00' }),
           ],
           error: null,
         });
@@ -96,6 +97,7 @@ describe('MonthScreen', () => {
     });
     renderAt('/month?m=2026-09');
     expect(await screen.findByText('таблица')).toBeInTheDocument();
+    expect(screen.getByText('перевод')).toBeInTheDocument();
   });
 
   it('показывает отметку «Данные от», когда ответ пришёл из кэша', () => {
