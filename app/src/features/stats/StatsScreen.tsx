@@ -10,7 +10,7 @@ import { formatDateTime, formatMoney, formatMonthShort, formatMonthTitle } from 
 import { todayISO } from '@/features/entry/dates';
 import { Breakdown } from './Breakdown';
 import { Forecast } from './Forecast';
-import { codeTrend, monthBreakdown, monthTotals, pickMonth, statsRange } from './stats';
+import { codeTrend, monthBreakdown, monthTotals, pickMonth, yearRange } from './stats';
 import styles from './StatsScreen.module.scss';
 
 // Ответ app_monthly_stats не содержит код базовой валюты, а отдельный
@@ -21,7 +21,9 @@ const BASE_CURRENCY = 'USD';
 export function StatsScreen() {
   const today = todayISO();
   const currentMonth = today.slice(0, 7);
-  const { data, isLoading, error } = useGetMonthlyStatsQuery(statsRange(today));
+  const currentYear = Number(today.slice(0, 4));
+  const [year, setYear] = useState(() => Number(today.slice(0, 4)));
+  const { data, isLoading, error } = useGetMonthlyStatsQuery(yearRange(year));
   const codes = useGetCodesQuery();
   const [selected, setSelected] = useState<string | null>(null);
   const [trendCode, setTrendCode] = useState<string | null>(null);
@@ -42,7 +44,31 @@ export function StatsScreen() {
       {fromCacheAt !== null && <p className={styles.muted}>Данные от {formatDateTime(fromCacheAt)}</p>}
       {isLoading && <p className={styles.muted}>Загружаем…</p>}
       {error && <p className={styles.muted}>Не удалось загрузить: {error.message}</p>}
-      {data && totals.length === 0 && <p className={styles.muted}>Пока нет данных ни за один месяц</p>}
+      {!isLoading && !error && (
+        <div className={styles.yearNav}>
+          <Button
+            aria-label="Предыдущий год"
+            onClick={() => {
+              setYear(year - 1);
+              setSelected(null);
+            }}
+          >
+            ‹
+          </Button>
+          <p className={styles.year}>{year}</p>
+          <Button
+            aria-label="Следующий год"
+            disabled={year >= currentYear}
+            onClick={() => {
+              setYear(year + 1);
+              setSelected(null);
+            }}
+          >
+            ›
+          </Button>
+        </div>
+      )}
+      {data && totals.length === 0 && <p className={styles.muted}>Пока нет данных за {String(year)}</p>}
       {data && totals.length > 0 && trendCode === null && (
         <>
           <div>

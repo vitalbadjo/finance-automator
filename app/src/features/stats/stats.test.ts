@@ -1,11 +1,11 @@
 import type { MonthlyStat } from '@/api/types';
 import { formatMonthShort } from '@/shared/format';
-import { codeTrend, forecast, monthBreakdown, monthTotals, pickMonth, pluralDays, statsRange, toYM } from './stats';
+import { codeTrend, forecast, monthBreakdown, monthTotals, pickMonth, pluralDays, toYM, yearRange } from './stats';
 
-describe('statsRange', () => {
-  it('12 месяцев назад от текущего, включая текущий', () => {
-    expect(statsRange('2026-09-20')).toEqual({ from: '2025-10-01', to: '2026-09-30' });
-    expect(statsRange('2026-01-05')).toEqual({ from: '2025-02-01', to: '2026-01-31' });
+describe('yearRange', () => {
+  it('календарный год целиком', () => {
+    expect(yearRange(2025)).toEqual({ from: '2025-01-01', to: '2025-12-31' });
+    expect(yearRange(2018)).toEqual({ from: '2018-01-01', to: '2018-12-31' });
   });
 });
 

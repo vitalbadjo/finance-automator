@@ -13,3 +13,5 @@
 .sum { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .share { display: block; color: var(--muted); font-size: 12px; }
 .trendHead { display: flex; justify-content: space-between; align-items: center; }
+.yearNav { display: flex; align-items: center; justify-content: space-between; }
+.year { font-size: 18px; font-weight: 600; margin: 0; }
