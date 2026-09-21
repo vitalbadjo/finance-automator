@@ -80,6 +80,24 @@ describe('MonthScreen', () => {
     expect(screen.getByText('наличные')).toBeInTheDocument();
   });
 
+  it('показывает тег «таблица» у строк из исторического импорта', async () => {
+    rpc.mockImplementation((fn: string) => {
+      if (fn === 'app_codes') return Promise.resolve({ data: codes, error: null });
+      if (fn === 'app_month_txns') {
+        return Promise.resolve({
+          data: [
+            ...fixtures,
+            row({ external_id: 'sheet-1', source: 'sheet', merchant_name: 'Импорт', code: 'прод', kind: 'expense', base_amount: 1, amount: 1, txn_date: '2026-09-10', txn_at: '2026-09-10T10:00:00+00:00' }),
+          ],
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: { message: `нет функции ${fn}` } });
+    });
+    renderAt('/month?m=2026-09');
+    expect(await screen.findByText('таблица')).toBeInTheDocument();
+  });
+
   it('показывает отметку «Данные от», когда ответ пришёл из кэша', () => {
     // Запрос не завершается: свежий ответ снял бы отметку.
     rpc.mockImplementation(() => new Promise(() => undefined));

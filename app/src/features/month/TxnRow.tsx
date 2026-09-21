@@ -7,7 +7,7 @@ interface Props {
   onClick: (txn: DisplayTxn) => void;
 }
 
-const SOURCE_LABEL: Record<string, string> = { bybit_card: 'карта', manual: 'вручную' };
+const SOURCE_LABEL: Record<string, string> = { bybit_card: 'карта', manual: 'вручную', sheet: 'таблица' };
 
 export function TxnRow({ txn, onClick }: Props) {
   const tag = [

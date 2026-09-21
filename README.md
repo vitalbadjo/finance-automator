@@ -41,7 +41,8 @@ spent-authomator/
 │   ├── 014_rules_gog.sql        merchant rules for Google & GoG
 │   ├── 015_app_stats.sql        monthly stats RPC for the app
 │   ├── 016_app_add_txn_id.sql   client-generated id for app_add_txn, idempotent retry
-│   └── 017_app_settings.sql     settings: app_settings, code/rule editing, hidden codes
+│   ├── 017_app_settings.sql     settings: app_settings, code/rule editing, hidden codes
+│   └── 018_sheet_import.sql     source sheet, hidden categories, spend_import_sheet_rows
 ├── app/                         PWA for manual entry (Vite + React + TypeScript)
 │   ├── src/api/                 supabase client, RTK Query API, error mapping, types
 │   ├── src/features/
@@ -104,6 +105,7 @@ db/014_rules_gog.sql
 db/015_app_stats.sql
 db/016_app_add_txn_id.sql
 db/017_app_settings.sql
+db/018_sheet_import.sql
 ```
 
 Skip `004`: it is a check, not a migration. `001` uses bare `create table`
@@ -243,6 +245,22 @@ rules and shows unmapped merchants from `v_unmapped` so rules can be created
 from them. All writes go through `app_source_rename`, `app_code_upsert`,
 `app_code_delete`, `app_rule_upsert`, `app_rule_delete`; reads through
 `app_settings()`.
+
+**Historical import.** `tools/sheets/` is a one-off script that moves years of
+past spend out of the LFS-YYYY spreadsheets into `spend.raw_txn` under
+`source = 'sheet'`, so the app's history and stats cover more than the card's
+own lifetime. Run it in order: apply `db/018_sheet_import.sql` first (it adds
+the `sheet` source and the hidden categories that only appear in old sheet
+data), then `tools/sheets/cbr_rates.py` to backfill FX rates, then
+`tools/sheets/import_sheets.py --dry-run` to review the parsed months before
+writing anything, then the same command without `--dry-run` to write and
+verify. The xlsx files themselves are not in the repo — export each sheet
+from Google Drive (File → Download → Microsoft Excel) and keep it outside
+the repository, e.g. under `~/lfs/`. Import is idempotent: `external_id` is
+synthesized per (year, month, row) so re-running the same file updates
+existing rows instead of duplicating them. Rows the spreadsheet marks as a
+transfer or savings move land with `message_type = '2'`, which makes them
+`kind = 'transfer'` in `v_txn` and keeps them out of the expense totals.
 
 ```bash
 cd app
